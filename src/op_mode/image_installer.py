@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 # Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+# Modifications Copyright DozenOS Contributors. See git history for details.
 #
 # This file is part of DozenOS.
 #

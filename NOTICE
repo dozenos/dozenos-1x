@@ -1,0 +1,14 @@
+This repository is a mechanically rebranded mirror of an upstream open
+source project, produced by the DozenOS rename-transform toolkit
+(https://github.com/dozenos/dozenos-rebrand). Each snapshot commit is
+generated from a fresh clone of the upstream source.
+
+Original copyright remains with the upstream authors; their notices are
+preserved verbatim in the source files and in debian/copyright where
+present. Modifications are Copyright DozenOS Contributors and consist of
+the mechanical rebrand plus any codified overlay changes recorded in the
+toolkit repository.
+
+DozenOS is an independent community project. It is not affiliated with,
+endorsed by, or supported by the upstream project's vendor or any other
+commercial entity.

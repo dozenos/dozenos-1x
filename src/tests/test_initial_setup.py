@@ -1,4 +1,5 @@
 # Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+# Modifications Copyright DozenOS Contributors. See git history for details.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 or later as
@@ -32,7 +33,7 @@ class TestInitialSetup(TestCase):
         vis.set_user_password(self.config, 'dozenos', 'dozenosdozenos')
 
         # Old password hash from the default config
-        old_pw = '$6$BsZrjW5K7b6H6l/T$pEsxUbDyT9Xr5YEYXKEUlkbEFIxfNtcKeRuZLNoxd94XhH.qSLZiivZUbGqcRGiAvIjmhXNi/V8buTwzUKdZD0'
+        old_pw = '$6$ilbEX4jPM5NgqEyH$2F/RMVZMs82sy.SbezMl5hjNEx/PYYgrw0IPwTa5LZWztrWQspr6nEk3Ho4HRyizGT5gZKhVl2a3xQI3u85Q3.'
         new_pw = self.config.return_value(["system", "login", "user", "dozenos", "authentication", "encrypted-password"])
 
         # Just check it changed the hash, don't try to check if hash is good
