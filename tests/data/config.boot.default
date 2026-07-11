@@ -3,7 +3,7 @@ system {
     login {
         user dozenos {
             authentication {
-                encrypted-password $6$yZVjYAbQvl5kCSw0$XXgtzG1uFVisp80BHYks5bTHdlisjZTbMFWcROXtFkvGUCGXRUQ2x8kv0BQrpKSkM79Gib1zpfPm5pWFY8bqW1
+                encrypted-password $6$BsZrjW5K7b6H6l/T$pEsxUbDyT9Xr5YEYXKEUlkbEFIxfNtcKeRuZLNoxd94XhH.qSLZiivZUbGqcRGiAvIjmhXNi/V8buTwzUKdZD0
                 plaintext-password ""
             }
             level admin

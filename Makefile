@@ -84,7 +84,7 @@ ocaml: libdozenosconfig
 	$(MAKE) -C src/ocaml
 
 .PHONY: all
-all: clean copyright libvyosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json generate-activation-scripts-json ocaml
+all: clean copyright libdozenosconfig pylint interface_definitions op_mode_definitions test j2lint vyshim generate-configd-include-json generate-activation-scripts-json ocaml
 
 .PHONY: copyright
 copyright:
