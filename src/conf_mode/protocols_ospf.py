@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from sys import exit
+from sys import argv
+
+from dozenos.base import Warning
+from dozenos.config import Config
+from dozenos.configverify import verify_common_route_maps
+from dozenos.configverify import verify_route_map
+from dozenos.configverify import verify_interface_exists
+from dozenos.configverify import verify_access_list
+from dozenos.configverify import has_frr_protocol_in_dict
+from dozenos.frrender import FRRender
+from dozenos.frrender import get_frrender_dict
+from dozenos.utils.dict import dict_search
+from dozenos.utils.network import get_interface_config
+from dozenos.utils.process import is_systemd_service_running
+from dozenos import ConfigError
+from dozenos import airbag
+airbag.enable()
+
+def get_config(config=None):
+    if config:
+        conf = config
+    else:
+        conf = Config()
+
+    return get_frrender_dict(conf, argv)
+
+def verify(config_dict):
+    if not has_frr_protocol_in_dict(config_dict, 'ospf'):
+        return None
+
+    vrf = None
+    if 'vrf_context' in config_dict:
+        vrf = config_dict['vrf_context']
+
+    # equivalent of the C foo ? 'a' : 'b' statement
+    ospf = vrf and dict_search(f'vrf.name.{vrf}.protocols.ospf',
+                                 config_dict) or config_dict['ospf']
+    ospf['policy'] = config_dict['policy']
+
+    verify_common_route_maps(ospf)
+
+    # As we can have a default-information route-map, we need to validate it!
+    route_map_name = dict_search('default_information.originate.route_map', ospf)
+    if route_map_name: verify_route_map(route_map_name, ospf)
+
+    # Validate if configured Access-list exists
+    if 'area' in ospf:
+        networks = []
+        for area, area_config in ospf['area'].items():
+            # Implemented as warning to not break existing configurations
+            if area == '0' and dict_search('area_type.nssa', area_config) != None:
+                Warning('You cannot configure NSSA to backbone!')
+            # Implemented as warning to not break existing configurations
+            if area == '0' and dict_search('area_type.stub', area_config) != None:
+                Warning('You cannot configure STUB to backbone!')
+            # Implemented as warning to not break existing configurations
+            if len(area_config['area_type']) > 1:
+                Warning(f'Only one area-type is supported for area "{area}"!')
+
+            if 'import_list' in area_config:
+                if acl_import := area_config['import_list']:
+                    verify_access_list(acl_import, ospf)
+            if 'export_list' in area_config:
+                if acl_export := area_config['export_list']:
+                    verify_access_list(acl_export, ospf)
+
+            if 'network' in area_config:
+                for network in area_config['network']:
+                    if network in networks:
+                        raise ConfigError(f'Network "{network}" already defined in different area!')
+                    networks.append(network)
+
+    if 'interface' in ospf:
+        for interface, interface_config in ospf['interface'].items():
+            verify_interface_exists(ospf, interface)
+            # One cannot use dead-interval and hello-multiplier at the same
+            # time. FRR will only activate the last option set via CLI.
+            if {'hello_multiplier', 'dead_interval'} <= set(interface_config):
+                raise ConfigError(f'Cannot use hello-multiplier and dead-interval ' \
+                                  f'concurrently for {interface}!')
+
+            # One cannot use the "network <prefix> area <id>" command and an
+            # per interface area assignment at the same time. FRR will error
+            # out using: "Please remove all network commands first."
+            if 'area' in ospf and 'area' in interface_config:
+                for area, area_config in ospf['area'].items():
+                    if 'network' in area_config:
+                        raise ConfigError('Cannot use OSPF "interface area" and ' \
+                                          '"area network" configuration at the same time!')
+
+            # FRR only allows a single authentication mode (MD5, NULL or plaintext)
+            # at a time. Prevent users from defining more than one authentication mode.
+            if 'authentication' in interface_config:
+                auth_keys = set(interface_config['authentication'])
+                exclusive_auth_keys = {'md5', 'null', 'plaintext_password'}
+                if len(auth_keys & exclusive_auth_keys) >= 2:
+                    raise ConfigError('Cannot use multiple authentication modes '
+                                      f'simultaneously for interface "{interface}"!')
+
+            # If interface specific options are set, we must ensure that the
+            # interface is bound to our requesting VRF. Due to the DozenOS
+            # priorities the interface is bound to the VRF after creation of
+            # the VRF itself, and before any routing protocol is configured.
+            if vrf:
+                tmp = get_interface_config(interface)
+                if 'master' not in tmp or tmp['master'] != vrf:
+                    raise ConfigError(f'Interface "{interface}" is not a member of VRF "{vrf}"!')
+
+    # Segment routing checks
+    if dict_search('segment_routing.global_block', ospf):
+        g_high_label_value = dict_search('segment_routing.global_block.high_label_value', ospf)
+        g_low_label_value = dict_search('segment_routing.global_block.low_label_value', ospf)
+
+        # If segment routing global block high or low value is blank, throw error
+        if not (g_low_label_value or g_high_label_value):
+            raise ConfigError('Segment routing global-block requires both low and high value!')
+
+        # If segment routing global block low value is higher than the high value, throw error
+        if int(g_low_label_value) > int(g_high_label_value):
+            raise ConfigError('Segment routing global-block low value must be lower than high value')
+
+    if dict_search('segment_routing.local_block', ospf):
+        if dict_search('segment_routing.global_block', ospf) == None:
+            raise ConfigError('Segment routing local-block requires global-block to be configured!')
+
+        l_high_label_value = dict_search('segment_routing.local_block.high_label_value', ospf)
+        l_low_label_value = dict_search('segment_routing.local_block.low_label_value', ospf)
+
+        # If segment routing local-block high or low value is blank, throw error
+        if not (l_low_label_value or l_high_label_value):
+            raise ConfigError('Segment routing local-block requires both high and low value!')
+
+        # If segment routing local-block low value is higher than the high value, throw error
+        if int(l_low_label_value) > int(l_high_label_value):
+            raise ConfigError('Segment routing local-block low value must be lower than high value')
+
+        # local-block most live outside global block
+        global_range = range(int(g_low_label_value), int(g_high_label_value) +1)
+        local_range  = range(int(l_low_label_value), int(l_high_label_value) +1)
+
+        # Check for overlapping ranges
+        if list(set(global_range) & set(local_range)):
+            raise ConfigError(f'Segment-Routing Global Block ({g_low_label_value}/{g_high_label_value}) '\
+                              f'conflicts with Local Block ({l_low_label_value}/{l_high_label_value})!')
+
+    # Check for a blank or invalid value per prefix
+    if dict_search('segment_routing.prefix', ospf):
+        for prefix, prefix_config in ospf['segment_routing']['prefix'].items():
+            if 'index' in prefix_config:
+                if prefix_config['index'].get('value') is None:
+                    raise ConfigError(f'Segment routing prefix {prefix} index value cannot be blank.')
+
+    # Check for explicit-null and no-php-flag configured at the same time per prefix
+    if dict_search('segment_routing.prefix', ospf):
+        for prefix, prefix_config in ospf['segment_routing']['prefix'].items():
+            if 'index' in prefix_config:
+                if ("explicit_null" in prefix_config['index']) and ("no_php_flag" in prefix_config['index']):
+                    raise ConfigError(f'Segment routing prefix {prefix} cannot have both explicit-null '\
+                                      f'and no-php-flag configured at the same time.')
+
+    # Check for index ranges being larger than the segment routing global block
+    if dict_search('segment_routing.global_block', ospf):
+        g_high_label_value = dict_search('segment_routing.global_block.high_label_value', ospf)
+        g_low_label_value = dict_search('segment_routing.global_block.low_label_value', ospf)
+        g_label_difference = int(g_high_label_value) - int(g_low_label_value)
+        if dict_search('segment_routing.prefix', ospf):
+            for prefix, prefix_config in ospf['segment_routing']['prefix'].items():
+                if 'index' in prefix_config:
+                    index_size = ospf['segment_routing']['prefix'][prefix]['index']['value']
+                    if int(index_size) > int(g_label_difference):
+                        raise ConfigError(f'Segment routing prefix {prefix} cannot have an '\
+                                          f'index base size larger than the SRGB label base.')
+
+    # Check route summarisation
+    if 'summary_address' in ospf:
+        for prefix, prefix_options in ospf['summary_address'].items():
+            if {'tag', 'no_advertise'} <= set(prefix_options):
+                raise ConfigError(f'Cannot set both "tag" and "no-advertise" for Type-5 '\
+                                  f'and Type-7 route summarisation of "{prefix}"!')
+
+    return None
+
+def generate(config_dict):
+    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
+        FRRender().generate(config_dict)
+    return None
+
+def apply(config_dict):
+    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
+        FRRender().apply()
+    return None
+
+if __name__ == '__main__':
+    try:
+        c = get_config()
+        verify(c)
+        generate(c)
+        apply(c)
+    except ConfigError as e:
+        print(e)
+        exit(1)

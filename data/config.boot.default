@@ -1,0 +1,56 @@
+interfaces {
+    loopback lo {
+    }
+}
+service {
+    ntp {
+        allow-client {
+            address "127.0.0.0/8"
+            address "169.254.0.0/16"
+            address "10.0.0.0/8"
+            address "172.16.0.0/12"
+            address "192.168.0.0/16"
+            address "::1/128"
+            address "fe80::/10"
+            address "fc00::/7"
+        }
+        server time1.dozenos.net {
+        }
+        server time2.dozenos.net {
+        }
+        server time3.dozenos.net {
+        }
+    }
+}
+system {
+    config-management {
+        commit-revisions "100"
+    }
+    host-name "dozenos"
+    login {
+        operator-group default {
+            command-policy {
+                allow "*"
+            }
+        }
+        user dozenos {
+            authentication {
+                encrypted-password "$6$yZVjYAbQvl5kCSw0$XXgtzG1uFVisp80BHYks5bTHdlisjZTbMFWcROXtFkvGUCGXRUQ2x8kv0BQrpKSkM79Gib1zpfPm5pWFY8bqW1"
+                plaintext-password ""
+            }
+        }
+    }
+    option {
+        reboot-on-upgrade-failure 5
+    }
+    syslog {
+        local {
+            facility all {
+                level "info"
+            }
+            facility local7 {
+                level "debug"
+            }
+        }
+    }
+}

@@ -1,0 +1,5 @@
+usr/bin/dozenos-smoketest
+usr/bin/dozenos-configtest
+usr/bin/dozenos-configtest-pki
+usr/libexec/dozenos/tests/smoke
+usr/libexec/dozenos/tests/configs

@@ -1,0 +1,6 @@
+{% if ssh_client.source_address is dozenos_defined %}
+BindAddress {{ ssh_client.source_address }}
+{% endif %}
+{% if ssh_client.source_interface is dozenos_defined %}
+BindInterface {{ ssh_client.source_interface }}
+{% endif %}

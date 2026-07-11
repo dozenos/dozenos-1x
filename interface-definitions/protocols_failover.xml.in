@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+       <node name="failover" owner="${dozenos_conf_scripts_dir}/protocols_failover.py">
+        <properties>
+          <help>Failover Routing</help>
+          <priority>490</priority>
+        </properties>
+        <children>
+          #include <include/failover/protocol-common-config.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

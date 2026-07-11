@@ -1,0 +1,9 @@
+{% macro flowtable(name, config) %}
+    flowtable DOZENOS_FLOWTABLE_{{ name }} {
+        hook ingress priority 0; devices = { {{ config.interface | join(', ') }} };
+{% if config.offload is dozenos_defined('hardware') %}
+        flags offload;
+{% endif %}
+        counter
+    }
+{% endmacro %}

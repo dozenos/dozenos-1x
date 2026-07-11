@@ -1,0 +1,97 @@
+{% if interface is dozenos_defined %}
+{%     for iface, iface_config in interface.items() %}
+!
+interface {{ iface }}
+ ip pim
+{%         if iface_config.bfd is dozenos_defined %}
+ ip pim bfd {{ 'profile ' ~ iface_config.bfd.profile if iface_config.bfd.profile is dozenos_defined }}
+{%         endif %}
+{%         if iface_config.no_bsm is dozenos_defined %}
+ no ip pim bsm
+{%         endif %}
+{%         if iface_config.dr_priority is dozenos_defined %}
+ ip pim drpriority {{ iface_config.dr_priority }}
+{%         endif %}
+{%         if iface_config.hello is dozenos_defined %}
+ ip pim hello {{ iface_config.hello }}
+{%         endif %}
+{%         if iface_config.no_unicast_bsm is dozenos_defined %}
+ no ip pim unicast-bsm
+{%         endif %}
+{%         if iface_config.passive is dozenos_defined %}
+ ip pim passive
+{%         endif %}
+{%         if iface_config.source_address is dozenos_defined %}
+ ip pim use-source {{ iface_config.source_address }}
+{%         endif %}
+{%         if iface_config.igmp is dozenos_defined and iface_config.igmp.disable is not dozenos_defined %}
+ ip igmp
+{%             if iface_config.igmp.query_interval %}
+ ip igmp query-interval {{ iface_config.igmp.query_interval }}
+{%             endif %}
+{%             if iface_config.igmp.query_max_response_time %}
+ ip igmp query-max-response-time {{ iface_config.igmp.query_max_response_time }}
+{%             endif %}
+{%             if iface_config.igmp.version is dozenos_defined %}
+ ip igmp version {{ iface_config.igmp.version }}
+{%             endif %}
+{%             if iface_config.igmp.join is dozenos_defined %}
+{%                 for join, join_config in iface_config.igmp.join.items() %}
+{%                     if join_config.source_address is dozenos_defined %}
+{%                         for source_address in join_config.source_address %}
+ ip igmp join-group {{ join }} {{ source_address }}
+{%                         endfor %}
+{%                     else %}
+ ip igmp join-group {{ join }}
+{%                     endif %}
+{%                 endfor %}
+{%             endif %}
+{%         endif %}
+exit
+{%     endfor %}
+{% endif %}
+!
+{% if igmp.watermark_warning is dozenos_defined %}
+ip igmp watermark-warn {{ igmp.watermark_warning }}
+{% endif %}
+!
+router pim
+{% if ecmp is dozenos_defined %}
+ ecmp {{ 'rebalance' if ecmp.rebalance is dozenos_defined }}
+{% endif %}
+{% if join_prune_interval is dozenos_defined %}
+ join-prune-interval {{ join_prune_interval }}
+{% endif %}
+{% if keep_alive_timer is dozenos_defined %}
+ keep-alive-timer {{ keep_alive_timer }}
+{% endif %}
+{% if packets is dozenos_defined %}
+ packets {{ packets }}
+{% endif %}
+{% if register_accept_list.prefix_list is dozenos_defined %}
+ register-accept-list {{ register_accept_list.prefix_list }}
+{% endif %}
+{% if register_suppress_time is dozenos_defined %}
+ register-suppress-time {{ register_suppress_time }}
+{% endif %}
+{% if rp.address is dozenos_defined %}
+{%     for address, address_config in rp.address.items() %}
+{%         for group in address_config.group %}
+ rp {{ address }} {{ group }}
+{%         endfor %}
+{%     endfor %}
+{% endif %}
+{% if rp.keep_alive_timer is dozenos_defined %}
+ rp keep-alive-timer {{ rp.keep_alive_timer }}
+{% endif %}
+{% if no_v6_secondary is dozenos_defined %}
+ no send-v6-secondary
+{% endif %}
+{% if spt_switchover.infinity_and_beyond is dozenos_defined %}
+ spt-switchover infinity-and-beyond {{ 'prefix-list ' ~ spt_switchover.infinity_and_beyond.prefix_list if spt_switchover.infinity_and_beyond.prefix_list is defined }}
+{% endif %}
+{% if ssm.prefix_list is dozenos_defined %}
+ ssm prefix-list {{ ssm.prefix_list }}
+{% endif %}
+exit
+!

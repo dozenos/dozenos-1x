@@ -1,0 +1,21 @@
+[Unit]
+Description=DozenOS conntrack logger daemon
+
+# Seemingly sensible way to say "as early as the system is ready"
+# All dozenos-configd needs is read/write mounted root
+After=conntrackd.service
+
+[Service]
+ExecStart=/usr/bin/python3 -u /usr/libexec/dozenos/services/dozenos-conntrack-logger -c /run/dozenos-conntrack-logger.conf
+Type=idle
+
+SyslogIdentifier=dozenos-conntrack-logger
+SyslogFacility=daemon
+
+Restart=on-failure
+
+User=root
+Group=vyattacfg
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!-- DHCP server configuration -->
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="dhcp-server" owner="${dozenos_conf_scripts_dir}/service_dhcp-server.py">
+        <properties>
+          <help>Dynamic Host Configuration Protocol (DHCP) for DHCP server</help>
+          <priority>911</priority>
+        </properties>
+        <children>
+          #include <include/dhcp/dhcp-server-common-config.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

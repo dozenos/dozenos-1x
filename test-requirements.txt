@@ -1,0 +1,6 @@
+python/
+lxml
+pylint
+nose2
+coverage
+jinja2

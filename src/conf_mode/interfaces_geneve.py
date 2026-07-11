@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from sys import exit
+
+from dozenos.config import Config
+from dozenos.configdep import set_dependents
+from dozenos.configdep import call_dependents
+from dozenos.configdict import get_interface_dict
+from dozenos.configdict import is_node_changed
+from dozenos.configdict import is_vrf_changed
+from dozenos.configverify import verify_address
+from dozenos.configverify import verify_mtu_ipv6
+from dozenos.configverify import verify_bridge_delete
+from dozenos.configverify import verify_mirror_redirect
+from dozenos.configverify import verify_bond_bridge_member
+from dozenos.configverify import verify_vrf
+from dozenos.ifconfig import GeneveIf
+from dozenos.utils.network import interface_exists
+from dozenos import ConfigError
+
+from dozenos import airbag
+airbag.enable()
+
+def get_config(config=None):
+    """
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
+    interface name will be added or a deleted flag
+    """
+    if config:
+        conf = config
+    else:
+        conf = Config()
+    base = ['interfaces', 'geneve']
+    ifname, geneve = get_interface_dict(conf, base)
+
+    # GENEVE interfaces are picky and require recreation if certain parameters
+    # change. But a GENEVE interface should - of course - not be re-created if
+    # it's description or IP address is adjusted. Feels somehow logic doesn't it?
+    for cli_option in ['remote', 'vni', 'parameters', 'port']:
+        if is_node_changed(conf, base + [ifname, cli_option]):
+            geneve.update({'rebuild_required': {}})
+
+    # Protocols static arp dependency
+    if 'static_arp' in geneve:
+        set_dependents('static_arp', conf)
+
+    # Check vrf membership, to ensure firewall is updated
+    if is_vrf_changed(conf, ifname):
+        set_dependents('firewall', conf)
+
+    return geneve
+
+def verify(geneve):
+    if 'deleted' in geneve:
+        verify_bridge_delete(geneve)
+        return None
+
+    verify_mtu_ipv6(geneve)
+    verify_address(geneve)
+    verify_vrf(geneve)
+    verify_bond_bridge_member(geneve)
+    verify_mirror_redirect(geneve)
+
+    if 'remote' not in geneve:
+        raise ConfigError('Remote side must be configured')
+
+    if 'vni' not in geneve:
+        raise ConfigError('VNI must be configured')
+
+    return None
+
+
+def generate(geneve):
+    return None
+
+def apply(geneve):
+    # Check if GENEVE interface already exists
+    if 'rebuild_required' in geneve or 'delete' in geneve:
+        if interface_exists(geneve['ifname']):
+            g = GeneveIf(**geneve)
+            # GENEVE is super picky and the tunnel always needs to be recreated,
+            # thus we can simply always delete it first.
+            g.remove()
+
+    if 'deleted' not in geneve:
+        # Finally create the new interface
+        g = GeneveIf(**geneve)
+        g.update(geneve)
+
+    # run the dependents
+    call_dependents()
+
+    return None
+
+
+if __name__ == '__main__':
+    try:
+        c = get_config()
+        verify(c)
+        generate(c)
+        apply(c)
+    except ConfigError as e:
+        print(e)
+        exit(1)

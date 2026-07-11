@@ -1,0 +1,20 @@
+!
+{% if interfaces is dozenos_defined %}
+{%     for if_name, if_config in interfaces.items() %}
+interface {{ if_name }}
+{%         if if_config.evpn.es_df_pref is dozenos_defined %}
+ evpn mh es-df-pref {{ if_config.evpn.es_df_pref }}
+{%         endif %}
+{%         if if_config.evpn.es_id is dozenos_defined %}
+ evpn mh es-id {{ if_config.evpn.es_id }}
+{%         endif %}
+{%         if if_config.evpn.es_sys_mac is dozenos_defined %}
+ evpn mh es-sys-mac {{ if_config.evpn.es_sys_mac }}
+{%         endif %}
+{%         if if_config.evpn.uplink is dozenos_defined %}
+ evpn mh uplink
+{%         endif %}
+exit
+!
+{%     endfor %}
+{% endif %}

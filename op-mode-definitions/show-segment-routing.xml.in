@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="segment-routing">
+        <properties>
+          <help>Show Segment Routing Information</help>
+        </properties>
+        <children>
+          <node name="srv6">
+            <properties>
+              <help>Segment Routing over IPv6 information</help>
+            </properties>
+            <children>
+              <node name="locator">
+                <properties>
+                  <help>Locator Information</help>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </node>
+              <node name="manager">
+                <properties>
+                  <help>Verify SRv6 manager</help>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/vtysh_wrapper.sh $@</command>
+              </node>
+            </children>
+          </node>
+          <node name="traffic-engineering">
+            <properties>
+              <help>Traffic Engineering information</help>
+            </properties>
+            <children>
+              <leafNode name="database">
+                <properties>
+                  <help>Show Traffic Engineering database</help>
+                </properties>
+                <command>vtysh -c "show pathd ted database verbose"</command>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

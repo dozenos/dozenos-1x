@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+         <node name="pseudo-ethernet">
+            <properties>
+              <help>Show pseudo-ethernet/MACvlan interface information</help>
+            </properties>
+            <command>${dozenos_op_scripts_dir}/interfaces.py show_summary --intf-type=pseudo-ethernet</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed pseudo-ethernet/MACvlan interface information</help>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/interfaces.py show --intf-type=pseudo-ethernet</command>
+              </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified pseudo-ethernet/MACvlan interface information</help>
+                  <completionHelp>
+                    <path>interfaces pseudo-ethernet</path>
+                  </completionHelp>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=pseudo-ethernet</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified pseudo-ethernet/MACvlan interface information</help>
+                    </properties>
+                    <command>${dozenos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=pseudo-ethernet</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

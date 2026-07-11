@@ -1,0 +1,215 @@
+{% macro conn(peer, peer_conf, ike_group, esp_group, uniqreqids) %}
+{% set name = peer.replace("@", "") | dot_colon_to_dash %}
+{# peer needs to reference the global IKE configuration for certain values #}
+{% set ike = ike_group[peer_conf.ike_group] %}
+    {{ name }} {
+{# Resolve effective reauth setting: peer overrides ike-group #}
+{% set reauth = peer_conf.ikev2_reauth if peer_conf.ikev2_reauth is dozenos_defined else '' %}
+{% if reauth == 'inherit' %}
+{%     set reauth = ike.ikev2_reauth is dozenos_defined %}
+{% else %}
+{%     set reauth = reauth == 'yes' %}
+{% endif %}
+{% if peer_conf.authentication.ppk.id is dozenos_defined %}
+        ppk_id = {{ peer_conf.authentication.ppk.id }}
+{% endif %}
+{% if peer_conf.authentication.ppk.required is dozenos_defined %}
+        ppk_required = yes
+{% endif %}
+{% if peer_conf.childless is dozenos_defined %}
+        childless = {{ peer_conf.childless }}
+{% endif %}
+        proposals = {{ ike | get_esp_ike_cipher | join(',') }}
+        version = {{ ike.key_exchange[4:] if ike.key_exchange is dozenos_defined else "0" }}
+{% if peer_conf.virtual_address is dozenos_defined %}
+        vips = {{ peer_conf.virtual_address | join(', ') }}
+{% endif %}
+        local_addrs = {{ peer_conf.local_address if peer_conf.local_address != 'any' else '%any' }} # dhcp:{{ peer_conf.dhcp_interface if 'dhcp_interface' in peer_conf else 'no' }}
+        remote_addrs = {{ peer_conf.remote_address | join(",") if peer_conf.remote_address is dozenos_defined and 'any' not in peer_conf.remote_address else '%any' }}
+{% if peer_conf.authentication.mode is dozenos_defined('x509') %}
+        send_cert = always
+{% endif %}
+{% if ike.dead_peer_detection is dozenos_defined %}
+        dpd_timeout = {{ ike.dead_peer_detection.timeout }}
+        dpd_delay = {{ ike.dead_peer_detection.interval }}
+{% endif %}
+{% if ike.key_exchange is dozenos_defined('ikev1') and ike.mode is dozenos_defined('aggressive') %}
+        aggressive = yes
+{% endif %}
+        rekey_time = {{ ike.lifetime }}s
+        mobike = {{ "no" if ike.disable_mobike is defined else "yes" }}
+{% if peer[0:1] == '@' %}
+        keyingtries = 0
+        reauth_time = 0
+{% elif peer_conf.connection_type is not dozenos_defined or peer_conf.connection_type is dozenos_defined('initiate') %}
+        keyingtries = 0
+{%     if reauth and ike.key_exchange is dozenos_defined('ikev2') %}
+        reauth_time = {{ ike.lifetime }}s
+{%     endif %}
+{% elif peer_conf.connection_type is dozenos_defined('trap') %}
+        keyingtries = 1
+{% endif %}
+{% if peer_conf.force_udp_encapsulation is dozenos_defined %}
+        encap = yes
+{% endif %}
+{% if uniqreqids is dozenos_defined %}
+        unique = {{ uniqreqids }}
+{% endif %}
+        local {
+{% if peer_conf.authentication.local_id is dozenos_defined %}
+            id = "{{ peer_conf.authentication.local_id }}"
+{% endif %}
+            auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
+{% if peer_conf.authentication.mode == 'x509' %}
+            certs = {{ peer_conf.authentication.x509.certificate }}.pem
+{% elif peer_conf.authentication.mode == 'rsa' %}
+            pubkeys = {{ peer_conf.authentication.rsa.local_key }}.pem
+{% endif %}
+        }
+        remote {
+            id = "{{ peer_conf.authentication.remote_id }}"
+            auth = {{ 'psk' if peer_conf.authentication.mode == 'pre-shared-secret' else 'pubkey' }}
+{% if peer_conf.authentication.mode == 'rsa' %}
+            pubkeys = {{ peer_conf.authentication.rsa.remote_key }}.pem
+{% endif %}
+        }
+        children {
+{% if peer_conf.vti.bind is dozenos_defined and peer_conf.tunnel is not dozenos_defined %}
+{%     set vti_esp = esp_group[ peer_conf.vti.esp_group ] if peer_conf.vti.esp_group is dozenos_defined else esp_group[ peer_conf.default_esp_group ] %}
+            {{ name }}-vti {
+                esp_proposals = {{ vti_esp | get_esp_ike_cipher(ike) | join(',') }}
+{%     if vti_esp.life_bytes is dozenos_defined %}
+                life_bytes = {{ vti_esp.life_bytes }}
+{%     endif %}
+{%     if vti_esp.life_packets is dozenos_defined %}
+                life_packets = {{ vti_esp.life_packets }}
+{%     endif %}
+                life_time = {{ vti_esp.lifetime }}s
+{%     if vti_esp.disable_rekey is dozenos_defined %}
+                rekey_bytes = 0
+                rekey_packets = 0
+                rekey_time = 0s
+{%     endif %}
+{#     set default traffic-selectors #}
+{%     set local_ts = '0.0.0.0/0,::/0' %}
+{%     set remote_ts = '0.0.0.0/0,::/0' %}
+{%     if peer_conf.vti.traffic_selector is dozenos_defined %}
+{%         if peer_conf.vti.traffic_selector.local is dozenos_defined and peer_conf.vti.traffic_selector.local.prefix is dozenos_defined %}
+{%             set local_ts = peer_conf.vti.traffic_selector.local.prefix | join(',') %}
+{%         endif %}
+{%         if peer_conf.vti.traffic_selector.remote is dozenos_defined and peer_conf.vti.traffic_selector.remote.prefix is dozenos_defined %}
+{%             set remote_ts = peer_conf.vti.traffic_selector.remote.prefix | join(',') %}
+{%         endif %}
+{%     endif %}
+                local_ts = {{ local_ts }}
+                remote_ts = {{ remote_ts }}
+                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
+{#              The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
+{#              Thus we simply shift the key by one to also support a vti0 interface #}
+{%     set if_id = peer_conf.vti.bind | replace('vti', '') | int + 1 %}
+                if_id_in = {{ if_id }}
+                if_id_out = {{ if_id }}
+                ipcomp = {{ 'yes' if vti_esp.compression is dozenos_defined else 'no' }}
+                mode = {{ vti_esp.mode }}
+{%     if peer[0:1] == '@' %}
+                start_action = none
+{%     elif peer_conf.connection_type is not dozenos_defined or peer_conf.connection_type is dozenos_defined('initiate') %}
+                start_action = start
+{%     elif peer_conf.connection_type is dozenos_defined('trap') %}
+                start_action = trap
+{%     elif peer_conf.connection_type is dozenos_defined('none') %}
+                start_action = none
+{%     endif %}
+{%     if ike.dead_peer_detection is dozenos_defined %}
+                dpd_action = {{ ike.dead_peer_detection.action }}
+{%     endif %}
+                close_action = {{ ike.close_action }}
+{%     if peer_conf.replay_window is dozenos_defined %}
+                replay_window = {{ peer_conf.replay_window }}
+{%     endif %}
+            }
+{% elif peer_conf.tunnel is dozenos_defined %}
+{%     for tunnel_id, tunnel_conf in peer_conf.tunnel.items() if tunnel_conf.disable is not defined %}
+{%         set tunnel_esp_name = tunnel_conf.esp_group if tunnel_conf.esp_group is dozenos_defined else peer_conf.default_esp_group %}
+{%         set tunnel_esp = esp_group[tunnel_esp_name] %}
+{%         set proto = tunnel_conf.protocol if tunnel_conf.protocol is dozenos_defined else '' %}
+{#         DozenOS 1.3.x (with strongSwan 5.7.x) previously allowed using `all` in traffic selectors, converting it to `%any`. #}
+{#         In strongSwan 5.9.x (DozenOS >= 1.4.x), the syntax `x.x.x.0/24[all/]` is no longer accepted. #}
+{#         We must now explicitly specify a protocol (e.g., `tcp`, `udp`). #}
+{#         To achieve "all" protocol behavior, simply use the subnet notation without brackets, #}
+{#         such as `x.x.x.0/24` or `x.x.x.0/24[/443]`. #}
+{%         set proto = '' if proto == 'all' else proto %}
+{%         set local_port = tunnel_conf.local.port if tunnel_conf.local.port is dozenos_defined else '' %}
+{%         set local_suffix = '[{0}/{1}]'.format(proto, local_port) if proto or local_port else '' %}
+{%         set remote_port = tunnel_conf.remote.port if tunnel_conf.remote.port is dozenos_defined else '' %}
+{%         set remote_suffix = '[{0}/{1}]'.format(proto, remote_port) if proto or remote_port else '' %}
+            {{ name }}-tunnel-{{ tunnel_id }} {
+                esp_proposals = {{ tunnel_esp | get_esp_ike_cipher(ike) | join(',') }}
+{%         if tunnel_esp.life_bytes is dozenos_defined %}
+                life_bytes = {{ tunnel_esp.life_bytes }}
+{%         endif %}
+{%         if tunnel_esp.life_packets is dozenos_defined %}
+                life_packets = {{ tunnel_esp.life_packets }}
+{%         endif %}
+                life_time = {{ tunnel_esp.lifetime }}s
+{%         if tunnel_esp.disable_rekey is dozenos_defined %}
+                rekey_bytes = 0
+                rekey_packets = 0
+                rekey_time = 0s
+{%         endif %}
+{%         if tunnel_esp.mode is not defined or tunnel_esp.mode == 'tunnel' %}
+{%             if tunnel_conf.local.prefix is dozenos_defined %}
+{%                 set local_prefix = tunnel_conf.local.prefix if 'any' not in tunnel_conf.local.prefix else ['0.0.0.0/0', '::/0'] %}
+                local_ts = {{ local_prefix | join(local_suffix + ",") }}{{ local_suffix }}
+{%             endif %}
+{%             if tunnel_conf.remote.prefix is dozenos_defined %}
+{%                 set remote_prefix = tunnel_conf.remote.prefix if 'any' not in tunnel_conf.remote.prefix else ['0.0.0.0/0', '::/0'] %}
+                remote_ts = {{ remote_prefix | join(remote_suffix + ",") }}{{ remote_suffix }}
+{%             endif %}
+{%             if tunnel_conf.priority is dozenos_defined %}
+                priority = {{ tunnel_conf.priority }}
+{%             endif %}
+{%         elif tunnel_esp.mode == 'transport' %}
+                local_ts = {{ peer_conf.local_address }}{{ local_suffix }}
+                remote_ts = {{ peer_conf.remote_address | join(",") }}{{ remote_suffix }}
+{%         endif %}
+                ipcomp = {{ 'yes' if tunnel_esp.compression is dozenos_defined else 'no' }}
+                mode = {{ tunnel_esp.mode }}
+{%         if peer[0:1] == '@' %}
+                start_action = none
+{%         elif peer_conf.connection_type is not dozenos_defined or peer_conf.connection_type is dozenos_defined('initiate') %}
+                start_action = start
+{%         elif peer_conf.connection_type is dozenos_defined('trap') %}
+                start_action = trap
+{%         elif peer_conf.connection_type is dozenos_defined('none') %}
+                start_action = none
+{%         endif %}
+{%         if ike.dead_peer_detection is dozenos_defined %}
+                dpd_action = {{ ike.dead_peer_detection.action }}
+{%         endif %}
+                close_action = {{ ike.close_action }}
+{%         if peer_conf.replay_window is dozenos_defined %}
+                replay_window = {{ peer_conf.replay_window }}
+{%         endif %}
+{%         if peer_conf.vti.bind is dozenos_defined %}
+{#             The key defaults to 0 and will match any policies which similarly do not have a lookup key configuration. #}
+{#             Thus we simply shift the key by one to also support a vti0 interface #}
+{%             set if_id = peer_conf.vti.bind | replace('vti', '') | int + 1 %}
+                updown = "/etc/ipsec.d/vti-up-down {{ peer_conf.vti.bind }}"
+                if_id_in = {{ if_id }}
+                if_id_out = {{ if_id }}
+{%         endif %}
+            }
+{%         if tunnel_conf.passthrough is dozenos_defined %}
+            {{ name }}-tunnel-{{ tunnel_id }}-passthrough {
+                local_ts = {{ tunnel_conf.passthrough | join(",") }}
+                remote_ts = {{ tunnel_conf.passthrough | join(",") }}
+                start_action = trap
+                mode = pass
+            }
+{%         endif %}
+{%     endfor %}
+{% endif %}
+        }
+    }
+{% endmacro %}

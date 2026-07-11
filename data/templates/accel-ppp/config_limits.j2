@@ -1,0 +1,12 @@
+{% if limits is dozenos_defined %}
+[connlimit]
+{%     if limits.connection_limit is dozenos_defined %}
+limit={{ limits.connection_limit }}
+{%     endif %}
+{%     if limits.burst is dozenos_defined %}
+burst={{ limits.burst }}
+{%     endif %}
+{%     if limits.timeout is dozenos_defined %}
+timeout={{ limits.timeout }}
+{%     endif %}
+{% endif %}

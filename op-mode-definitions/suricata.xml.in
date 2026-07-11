@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="update">
+    <children>
+      <node name="suricata">
+        <properties>
+          <help>Update Suricata</help>
+        </properties>
+        <command>${dozenos_op_scripts_dir}/update_suricata.sh</command>
+      </node>
+    </children>
+  </node>
+  <node name="restart">
+    <children>
+      <node name="suricata">
+        <properties>
+          <help>Restart Suricata service</help>
+        </properties>
+        <command>${dozenos_op_scripts_dir}/restart.py restart_service --name suricata</command>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

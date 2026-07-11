@@ -1,0 +1,11 @@
+[Unit]
+Description=Failover route service
+After=dozenos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/dozenos/dozenos-failover.py --config-dir {{ config_dir }}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,36 @@
+{% set args = [] %}
+{% if script.on_create is dozenos_defined %}
+{%     set _ = args.append("-c " + script.on_create) %}
+{% endif %}
+{% if script.on_destroy is dozenos_defined %}
+{%     set _ = args.append("-r " + script.on_destroy) %}
+{% endif %}
+
+{% if status.port is dozenos_defined %}
+{%     set _ = args.append("-p " + status.port) %}
+{% endif %}
+
+{% if threads.tunnel is dozenos_defined %}
+{%     set _ = args.append("--tunthreads " + threads.tunnel) %}
+{% endif %}
+{% if threads.tunnel_affinity is dozenos_defined %}
+{%     set _ = args.append("--tunaffinity " + threads.tunnel_affinity) %}
+{% endif %}
+
+{% if threads.udp is dozenos_defined %}
+{%     set _ = args.append("--udpthreads " + threads.udp) %}
+{% endif %}
+{% if threads.udp_affinity is dozenos_defined %}
+{%     set _ = args.append("--udpaffinity " + threads.udp_affinity) %}
+{% endif %}
+
+[Unit]
+StartLimitIntervalSec=0
+After=dozenos-router.service
+
+[Service]
+EnvironmentFile=
+ExecStart=/usr/sbin/gwlbtun {{ args | join(' ') }}
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+Restart=always
+RestartSec=10

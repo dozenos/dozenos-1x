@@ -1,0 +1,6 @@
+{% if http_client.source_interface is dozenos_defined %}
+--interface "{{ http_client.source_interface }}"
+{% endif %}
+{% if http_client.source_address is dozenos_defined %}
+--interface "{{ http_client.source_address }}"
+{% endif %}

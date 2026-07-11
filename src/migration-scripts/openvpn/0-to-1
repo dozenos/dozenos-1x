@@ -1,0 +1,54 @@
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this library.  If not, see <http://www.gnu.org/licenses/>.
+
+# Removes outdated ciphers (DES and Blowfish) from OpenVPN configs
+
+from dozenos.configtree import ConfigTree
+
+updated_cipher='3des'
+
+def migrate(config: ConfigTree) -> None:
+    if not config.exists(['interfaces', 'openvpn']):
+        # Nothing to do
+        return
+
+    ovpn_intfs = config.list_nodes(['interfaces', 'openvpn'])
+    for	i in ovpn_intfs:
+        # Remove DES and Blowfish from 'encryption cipher'
+        # Support for these insecure ciphers will be removed in OpenVPN 2.6.
+        cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'cipher']
+        if config.exists(cipher_path):
+            cipher = config.return_value(cipher_path)
+            if cipher in ['des', 'bf128', 'bf256']:
+                config.delete(cipher_path)
+
+        ncp_cipher_path = ['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers']
+        if config.exists(ncp_cipher_path):
+            ncp_ciphers = config.return_values(['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers'])
+            if 'des' in ncp_ciphers:
+                config.delete_value(['interfaces', 'openvpn', i, 'encryption', 'ncp-ciphers'], 'des')
+
+        # Clean up the encryption subtree if the migration procedure left it empty
+        if config.exists(['interfaces', 'openvpn', i, 'encryption']) and \
+           (config.list_nodes(['interfaces', 'openvpn', i, 'encryption']) == []):
+            config.delete(['interfaces', 'openvpn', i, 'encryption'])
+
+        # We need to take care about site-to-site tunnels which had an implicit
+        # OpenVPN default cipher (BF-CBC) with block size less than 128 bit (64 bit).
+        mode_path = ['interfaces', 'openvpn', i, 'mode']
+        if config.exists(mode_path) and config.return_value(mode_path) == 'site-to-site':
+            # if no explicit cipher is defined, we will "upgrade" to 3DES at least
+            if not config.exists(cipher_path):
+                config.set(cipher_path, value=updated_cipher)

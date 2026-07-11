@@ -1,0 +1,3 @@
+dozenos-1x-aws/lib/* /lib
+dozenos-1x-aws/opt/* /opt
+dozenos-1x-aws/usr/* /usr

@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="bgp" owner="${dozenos_conf_scripts_dir}/protocols_bgp.py">
+        <properties>
+          <help>Border Gateway Protocol (BGP)</help>
+          <priority>820</priority>
+        </properties>
+        <children>
+          #include <include/bgp/protocol-common-config.xml.i>
+          <node name="parameters">
+            <children>
+              <leafNode name="input-queue-limit">
+                <properties>
+                  <help>Input queue limit for all peers when messaging parsing</help>
+                  <valueHelp>
+                    <format>u32:1-4294967295</format>
+                    <description>Queue limit, increase only if you have the memory to handle large queues</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>10000</defaultValue>
+              </leafNode>
+              <leafNode name="output-queue-limit">
+                <properties>
+                  <help>Output queue limit for all peers when messaging parsing</help>
+                  <valueHelp>
+                    <format>u32:1-4294967295</format>
+                    <description>Queue limit, increase only if you have the memory to handle large queues</description>
+                  </valueHelp>
+                  <constraint>
+                    <validator name="numeric" argument="--range 1-4294967295"/>
+                  </constraint>
+                </properties>
+                <defaultValue>10000</defaultValue>
+              </leafNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

@@ -1,0 +1,51 @@
+submenu "Boot options" {
+    submenu "Select boot mode" {
+        menuentry "Normal" {
+            set bootmode="normal"
+            export bootmode
+            configfile ${prefix}/grub.cfg.d/*dozenos-menu*.cfg
+        }
+        menuentry "Password reset" {
+            set bootmode="pw_reset"
+            export bootmode
+            configfile ${prefix}/grub.cfg.d/*dozenos-menu*.cfg
+        }
+        menuentry "System recovery" {
+            set bootmode="recovery"
+            export bootmode
+            configfile ${prefix}/grub.cfg.d/*dozenos-menu*.cfg
+        }
+        menuentry "Load the whole root filesystem to RAM" {
+            set boot_toram="yes"
+            export boot_toram
+            configfile ${prefix}/grub.cfg.d/*dozenos-menu*.cfg
+        }
+    }
+    submenu "Select console type" {
+        menuentry "tty (graphical)" {
+            set console_type="tty"
+            export console_type
+            configfile ${prefix}/grub.cfg.d/*dozenos-menu*.cfg
+        }
+        menuentry "ttyS (serial)" {
+            if [ "${grub_cpu}" == "arm64" ]; then
+                set serial_console="ttyAMA"
+            else
+                set serial_console="ttyS"
+            fi
+            set console_type="$serial_console"
+            export console_type
+            setup_serial
+            configfile ${prefix}/grub.cfg.d/*dozenos-menu*.cfg
+        }
+    }
+    menuentry "Enter console number" {
+        read console_num
+        export console_num
+        setup_serial
+        configfile ${prefix}/grub.cfg.d/*dozenos-menu*.cfg
+    }
+    menuentry "Current: boot mode: ${bootmode}, console: ${console_type}${console_num}" {
+        echo
+    }
+}

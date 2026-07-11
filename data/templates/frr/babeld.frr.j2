@@ -1,0 +1,83 @@
+{% from 'frr/distribute_list_macro.j2' import render_distribute_list %}
+{% from 'frr/ipv6_distribute_list_macro.j2' import render_ipv6_distribute_list %}
+!
+{# Interface specific configuration #}
+{% if interface is dozenos_defined %}
+{%     for iface, iface_config in interface.items() %}
+interface {{ iface }}
+{%         if iface_config.type is dozenos_defined('wired') or iface_config.type is dozenos_defined('wireless') %}
+ babel {{ iface_config.type }}
+{%         endif %}
+{%         if iface_config.split_horizon is dozenos_defined("enable") %}
+ babel split-horizon
+{%         elif iface_config.split_horizon is dozenos_defined("disable") %}
+ no babel split-horizon
+{%         endif %}
+{%         if iface_config.hello_interval is dozenos_defined %}
+ babel hello-interval {{ iface_config.hello_interval }}
+{%         endif %}
+{%         if iface_config.update_interval is dozenos_defined %}
+ babel update-interval {{ iface_config.update_interval }}
+{%         endif %}
+{%         if iface_config.rxcost is dozenos_defined %}
+ babel rxcost {{ iface_config.rxcost }}
+{%         endif %}
+{%         if iface_config.rtt_decay is dozenos_defined %}
+ babel rtt-decay {{ iface_config.rtt_decay }}
+{%         endif %}
+{%         if iface_config.rtt_min is dozenos_defined %}
+ babel rtt-min {{ iface_config.rtt_min }}
+{%         endif %}
+{%         if iface_config.rtt_max is dozenos_defined %}
+ babel rtt-max {{ iface_config.rtt_max }}
+{%         endif %}
+{%         if iface_config.max_rtt_penalty is dozenos_defined %}
+ babel max-rtt-penalty {{ iface_config.max_rtt_penalty }}
+{%         endif %}
+{%         if iface_config.enable_timestamps is dozenos_defined %}
+ babel enable-timestamps
+{%         endif %}
+{%         if iface_config.channel is dozenos_defined %}
+ babel channel {{ iface_config.channel | replace("non-interfering", "noninterfering") }}
+{%         endif %}
+exit
+!
+{%     endfor %}
+{% endif %}
+!
+router babel
+{% if parameters.diversity is dozenos_defined %}
+ babel diversity
+{% endif %}
+{% if parameters.diversity_factor is dozenos_defined %}
+ babel diversity-factor {{ parameters.diversity_factor }}
+{% endif %}
+{% if parameters.resend_delay is dozenos_defined %}
+ babel resend-delay {{ parameters.resend_delay }}
+{% endif %}
+{% if parameters.smoothing_half_life is dozenos_defined %}
+ babel smoothing-half-life {{ parameters.smoothing_half_life }}
+{% endif %}
+{% if interface is dozenos_defined %}
+{%     for iface, iface_config in interface.items() %}
+ network {{ iface }}
+{%     endfor %}
+{% endif %}
+{% if redistribute is dozenos_defined %}
+{%     for address_family in redistribute %}
+{%         for protocol, protocol_config in redistribute[address_family].items() %}
+{%             if protocol is dozenos_defined('ospfv3') %}
+{%                 set protocol = 'ospf6' %}
+{%             endif %}
+ redistribute {{ address_family }} {{ protocol }}
+{%         endfor %}
+{%     endfor %}
+{% endif %}
+{% if distribute_list.ipv4 is dozenos_defined %}
+{{ render_distribute_list(distribute_list.ipv4) }}
+{% endif %}
+{% if distribute_list.ipv6 is dozenos_defined %}
+{{ render_ipv6_distribute_list(distribute_list.ipv6) }}
+{% endif %}
+exit
+!

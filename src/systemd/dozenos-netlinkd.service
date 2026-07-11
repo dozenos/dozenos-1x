@@ -1,0 +1,25 @@
+[Unit]
+Description=DozenOS netlink daemon
+
+# Without this option, lots of default dependencies are added,
+# among them network.target, which creates a dependency cycle
+DefaultDependencies=no
+
+# Seemingly sensible way to say "as early as the system is ready"
+# All dozenos-netlinkd needs is read/write mounted root
+After=systemd-remount-fs.service dozenos-router.service
+
+[Service]
+ExecStart=/usr/bin/python3 -u /usr/libexec/dozenos/services/dozenos-netlinkd
+Type=simple
+
+SyslogIdentifier=dozenos-netlinkd
+SyslogFacility=daemon
+
+Restart=on-failure
+
+User=root
+Group=vyattacfg
+
+[Install]
+WantedBy=dozenos.target

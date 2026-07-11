@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <leafNode name="license">
+        <properties>
+          <help>Show DozenOS license information</help>
+        </properties>
+        <command>less $_vyatta_less_options --prompt=".license, page %dt of %D" -- ${dozenos_data_dir}/EULA</command>
+      </leafNode>
+    </children>
+  </node>
+</interfaceDefinition>

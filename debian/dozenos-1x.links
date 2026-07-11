@@ -1,0 +1,4 @@
+/usr/libexec/dozenos/system/standalone_root_pw_reset /opt/vyatta/sbin/standalone_root_pw_reset
+/usr/libexec/dozenos/vyconf_cli.py /usr/libexec/dozenos/vyconf/bin/vy_commit
+/usr/libexec/dozenos/vyconf_cli.py /usr/libexec/dozenos/vyconf/bin/vy_in_session
+/usr/bin/bgpq4 /usr/bin/bgpq3

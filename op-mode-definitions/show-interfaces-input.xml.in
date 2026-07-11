@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <node name="interfaces">
+        <children>
+          <node name="input">
+            <properties>
+              <help>Show input (ifb) interface information</help>
+            </properties>
+            <command>${dozenos_op_scripts_dir}/interfaces.py show_summary --intf-type=input</command>
+            <children>
+              <leafNode name="detail">
+                <properties>
+                  <help>Show detailed input interface information</help>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/interfaces.py show --intf-type=input</command>
+              </leafNode>
+              <virtualTagNode>
+                <properties>
+                  <help>Show specified input interface information</help>
+                  <completionHelp>
+                    <path>interfaces input</path>
+                  </completionHelp>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/interfaces.py show --intf-name="$4" --intf-type=input</command>
+                <children>
+                  <leafNode name="brief">
+                    <properties>
+                      <help>Show summary of the specified input interface information</help>
+                    </properties>
+                    <command>${dozenos_op_scripts_dir}/interfaces.py show_summary --intf-name="$4" --intf-type=input</command>
+                  </leafNode>
+                  #include <include/show-interface-type-event-log.xml.i>
+                </children>
+              </virtualTagNode>
+            </children>
+          </node>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

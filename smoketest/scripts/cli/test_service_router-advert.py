@@ -1,0 +1,394 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
+import unittest
+
+from dozenos.configsession import ConfigSessionError
+from base_dozenostest_shim import DozenOSUnitTestSHIM
+
+from dozenos.utils.file import read_file
+from dozenos.utils.process import process_named_running
+
+PROCESS_NAME = 'radvd'
+RADVD_CONF = '/run/radvd/radvd.conf'
+
+interface = 'eth1'
+base_path = ['service', 'router-advert', 'interface', interface]
+address_base = ['interfaces', 'ethernet', interface, 'address']
+prefix = '::/64'
+
+def get_config_value(key):
+    tmp = read_file(RADVD_CONF)
+    tmp = re.findall(r'\n?{}\s+(.*)'.format(key), tmp)
+    return tmp[0].split()[0].replace(';','')
+
+class TestServiceRADVD(DozenOSUnitTestSHIM.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestServiceRADVD, cls).setUpClass()
+
+        # ensure we can also run this test on a live system - so lets clean
+        # out the current configuration :)
+        cls.cli_delete(cls, ['service', 'router-advert'])
+
+        cls.cli_set(cls, address_base + ['2001:db8::1/64'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_delete(cls, address_base)
+        super(TestServiceRADVD, cls).tearDownClass()
+
+    def tearDown(self):
+        # Check for running process
+        self.assertTrue(process_named_running(PROCESS_NAME))
+        self.cli_delete(base_path)
+        self.cli_commit()
+        # Check for no longer running process
+        self.assertFalse(process_named_running(PROCESS_NAME))
+        # always forward to base class
+        super().tearDown()
+
+    def test_common(self):
+        self.cli_set(base_path + ['prefix', prefix, 'no-on-link-flag'])
+        self.cli_set(base_path + ['prefix', prefix, 'no-autonomous-flag'])
+        self.cli_set(base_path + ['prefix', prefix, 'valid-lifetime', 'infinity'])
+        self.cli_set(base_path + ['other-config-flag'])
+
+        # commit changes
+        self.cli_commit()
+
+        # verify values
+        tmp = get_config_value('interface')
+        self.assertEqual(tmp, interface)
+
+        tmp = get_config_value('prefix')
+        self.assertEqual(tmp, prefix)
+
+        tmp = get_config_value('AdvOtherConfigFlag')
+        self.assertEqual(tmp, 'on')
+
+        # this is a default value
+        tmp = get_config_value('AdvRetransTimer')
+        self.assertEqual(tmp, '0')
+
+        # this is a default value
+        tmp = get_config_value('AdvCurHopLimit')
+        self.assertEqual(tmp, '64')
+
+        # this is a default value
+        tmp = get_config_value('AdvDefaultPreference')
+        self.assertEqual(tmp, 'medium')
+
+        tmp = get_config_value('AdvAutonomous')
+        self.assertEqual(tmp, 'off')
+
+        # this is a default value
+        tmp = get_config_value('AdvValidLifetime')
+        self.assertEqual(tmp, 'infinity')
+
+        # this is a default value
+        tmp = get_config_value('AdvPreferredLifetime')
+        self.assertEqual(tmp, '14400')
+
+        tmp = get_config_value('AdvOnLink')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('DeprecatePrefix')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('DecrementLifetimes')
+        self.assertEqual(tmp, 'off')
+
+    def test_dns(self):
+        nameserver = ['2001:db8::1', '2001:db8::2']
+        dnssl = ['dozenos.net', 'dozenos.io']
+        ns_lifetime = '599'
+
+        self.cli_set(base_path + ['prefix', prefix, 'valid-lifetime', 'infinity'])
+        self.cli_set(base_path + ['other-config-flag'])
+
+        for ns in nameserver:
+            self.cli_set(base_path + ['name-server', ns])
+        for sl in dnssl:
+            self.cli_set(base_path + ['dnssl', sl])
+
+        self.cli_set(base_path + ['name-server-lifetime', ns_lifetime])
+        # The value, if not 0, must be at least interval max (defaults to 600).
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+
+        ns_lifetime = '600'
+        self.cli_set(base_path + ['name-server-lifetime', ns_lifetime])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+
+        tmp = 'RDNSS ' + ' '.join(nameserver) + ' {'
+        self.assertIn(tmp, config)
+
+        tmp = f'AdvRDNSSLifetime {ns_lifetime};'
+        self.assertIn(tmp, config)
+
+        tmp = 'DNSSL ' + ' '.join(dnssl) + ' {'
+        self.assertIn(tmp, config)
+
+    def test_deprecate_prefix(self):
+        self.cli_set(base_path + ['prefix', prefix, 'valid-lifetime', 'infinity'])
+        self.cli_set(base_path + ['prefix', prefix, 'deprecate-prefix'])
+        self.cli_set(base_path + ['prefix', prefix, 'decrement-lifetime'])
+
+        # commit changes
+        self.cli_commit()
+
+        tmp = get_config_value('DeprecatePrefix')
+        self.assertEqual(tmp, 'on')
+
+        tmp = get_config_value('DecrementLifetimes')
+        self.assertEqual(tmp, 'on')
+
+    def test_route(self):
+        route = '2001:db8:1000::/64'
+
+        self.cli_set(base_path + ['prefix', prefix])
+        self.cli_set(base_path + ['route', route])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+
+        tmp = f'route {route}' + ' {'
+        self.assertIn(tmp, config)
+
+        self.assertIn('AdvRouteLifetime 1800;', config)
+        self.assertIn('AdvRoutePreference medium;', config)
+        self.assertIn('RemoveRoute on;', config)
+
+    def test_rasrcaddress(self):
+        ra_src = ['fe80::1', 'fe80::2']
+
+        self.cli_set(base_path + ['prefix', prefix])
+        for src in ra_src:
+            self.cli_set(base_path + ['source-address', src])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+        self.assertIn('AdvRASrcAddress {', config)
+        for src in ra_src:
+            self.assertIn(f'        {src};', config)
+
+    def test_nat64prefix(self):
+        nat64prefix = '64:ff9b::/96'
+        nat64prefix_invalid = '64:ff9b::/44'
+
+        self.cli_set(base_path + ['nat64prefix', nat64prefix])
+
+        # and another invalid prefix
+        # Invalid NAT64 prefix length for "2001:db8::/34", can only be one of:
+        # /32, /40, /48, /56, /64, /96
+        self.cli_set(base_path + ['nat64prefix', nat64prefix_invalid])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['nat64prefix', nat64prefix_invalid])
+
+        # NAT64 valid-lifetime must not be smaller then "interval max"
+        self.cli_set(base_path + ['nat64prefix', nat64prefix, 'valid-lifetime', '500'])
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_delete(base_path + ['nat64prefix', nat64prefix, 'valid-lifetime'])
+
+        # commit changes
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+
+        tmp = f'nat64prefix {nat64prefix}' + ' {'
+        self.assertIn(tmp, config)
+        self.assertIn('AdvValidLifetime 65528;', config) # default
+
+    def test_captive_portal(self):
+        captive_portal = 'https://example.com/api/capport.json'
+
+        self.cli_set(base_path + ['captive-portal', captive_portal])
+        # commit changes
+        self.cli_commit()
+
+        # Verify generated configuration
+        tmp = get_config_value('AdvCaptivePortalAPI')
+        self.assertEqual(tmp, f'"{captive_portal}"')
+
+    def test_advsendadvert_advintervalopt(self):
+        ra_src = ['fe80::1', 'fe80::2']
+
+        self.cli_set(base_path + ['prefix', prefix])
+        self.cli_set(base_path + ['no-send-advert'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify generated configuration
+        config = read_file(RADVD_CONF)
+        tmp = get_config_value('AdvSendAdvert')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('AdvIntervalOpt')
+        self.assertEqual(tmp, 'on')
+
+        self.cli_set(base_path + ['no-send-interval'])
+        # commit changes
+        self.cli_commit()
+
+        # Verify generated configuration
+        config = read_file(RADVD_CONF)
+        tmp = get_config_value('AdvSendAdvert')
+        self.assertEqual(tmp, 'off')
+
+        tmp = get_config_value('AdvIntervalOpt')
+        self.assertEqual(tmp, 'off')
+
+    def test_auto_ignore(self):
+        isp_prefix = '2001:db8::/64'
+        ula_prefixes = ['fd00::/64', 'fd01::/64']
+
+        # configure wildcard prefix
+        self.cli_set(base_path + ['prefix', '::/64'])
+
+        # test auto-ignore CLI behaviors with no prefix overrides
+        # set auto-ignore for all three prefixes
+        self.cli_set(base_path + ['auto-ignore', isp_prefix])
+
+        for ula_prefix in ula_prefixes:
+            self.cli_set(base_path + ['auto-ignore', ula_prefix])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # ensure autoignoreprefixes block is generated in config file
+        tmp = f'autoignoreprefixes' + ' {'
+        self.assertIn(tmp, config)
+
+        # ensure all three prefixes are contained in the block
+        self.assertIn(f'        {isp_prefix};', config)
+        for ula_prefix in ula_prefixes:
+            self.assertIn(f'        {ula_prefix};', config)
+
+        # remove a prefix and verify it's gone
+        self.cli_delete(base_path + ['auto-ignore', ula_prefixes[1]])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        self.assertNotIn(f'        {ula_prefixes[1]};', config)
+
+        # ensure remaining two prefixes are still present
+        self.assertIn(f'        {ula_prefixes[0]};', config)
+        self.assertIn(f'        {isp_prefix};', config)
+
+        # remove the remaining two prefixes and verify the config block is gone
+        self.cli_delete(base_path + ['auto-ignore', ula_prefixes[0]])
+        self.cli_delete(base_path + ['auto-ignore', isp_prefix])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        tmp = f'autoignoreprefixes' + ' {'
+        self.assertNotIn(tmp, config)
+
+        # test wildcard prefix overrides, with and without auto-ignore CLI configuration
+        newline = '\n'
+        left_curly = '{'
+        right_curly = '}'
+
+        # override ULA prefixes
+        for ula_prefix in ula_prefixes:
+            self.cli_set(base_path + ['prefix', ula_prefix])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # ensure autoignoreprefixes block is generated in config file with both prefixes
+        tmp = f'autoignoreprefixes' + f' {left_curly}{newline}        {ula_prefixes[0]};{newline}        {ula_prefixes[1]};{newline}    {right_curly};'
+        self.assertIn(tmp, config)
+
+        # remove a ULA prefix and ensure there is only one prefix in the config block
+        self.cli_delete(base_path + ['prefix', ula_prefixes[0]])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # ensure autoignoreprefixes block is generated in config file with only one prefix
+        tmp = f'autoignoreprefixes' + f' {left_curly}{newline}        {ula_prefixes[1]};{newline}    {right_curly};'
+        self.assertIn(tmp, config)
+
+        # exclude a prefix with auto-ignore CLI syntax
+        self.cli_set(base_path + ['auto-ignore', ula_prefixes[0]])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # verify that both prefixes appear in config block once again
+        tmp = f'autoignoreprefixes' + f' {left_curly}{newline}        {ula_prefixes[0]};{newline}        {ula_prefixes[1]};{newline}    {right_curly};'
+        self.assertIn(tmp, config)
+
+        # override first ULA prefix again
+        # first ULA is auto-ignored in CLI, it must appear only once in config
+        self.cli_set(base_path + ['prefix', ula_prefixes[0]])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # verify that both prefixes appear uniquely
+        tmp = f'autoignoreprefixes' + f' {left_curly}{newline}        {ula_prefixes[0]};{newline}        {ula_prefixes[1]};{newline}    {right_curly};'
+        self.assertIn(tmp, config)
+
+        # remove wildcard prefix and verify config block is gone
+        self.cli_delete(base_path + ['prefix', '::/64'])
+
+        # commit and reload config
+        self.cli_commit()
+        config = read_file(RADVD_CONF)
+
+        # verify config block is gone
+        tmp = f'autoignoreprefixes' + ' {'
+        self.assertNotIn(tmp, config)
+
+    def test_base_interface(self):
+        self.cli_set(base_path + ['prefix', '::/64'])
+        self.cli_set(base_path + ['prefix', '::/64', 'base-interface', 'eth0'])
+        self.cli_commit()
+
+        config = read_file(RADVD_CONF)
+        self.assertIn('Base6Interface eth0;', config)
+
+        self.cli_set(base_path + ['prefix', '2001:db8:1234::/64'])
+        self.cli_set(
+            base_path + ['prefix', '2001:db8:1234::/64', 'base-interface', 'eth0']
+        )
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+if __name__ == '__main__':
+    unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())

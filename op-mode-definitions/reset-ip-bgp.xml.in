@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="reset">
+    <children>
+      <node name="ip">
+        <children>
+          <node name="bgp">
+            <properties>
+              <help>Border Gateway Protocol (BGP) information</help>
+            </properties>
+            <children>
+              <virtualTagNode>
+                <properties>
+                  <help>BGP IPv4/IPv6 neighbor to clear</help>
+                  <completionHelp>
+                    <script>${dozenos_completion_dir}/list_bgp_neighbors.sh --ipv4</script>
+                  </completionHelp>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </virtualTagNode>
+              <node name="all">
+                <properties>
+                  <help>Clear all BGP peering sessions</help>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                <children>
+                  #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                </children>
+              </node>
+              <tagNode name="dampening">
+                <properties>
+                  <help>Clear BGP route flap dampening information for given host ornetwork address</help>
+                  <completionHelp>
+                    <list>&lt;x.x.x.x&gt; &lt;x.x.x.x/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <standalone>
+                  <help>Clear BGP route flap dampening information</help>
+                  <command>${dozenos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                </standalone>
+                <command>${dozenos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                <children>
+                  <virtualTagNode>
+                    <properties>
+                      <help>Clear BGP route flap dampening information for given network address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${dozenos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                  </virtualTagNode>
+                </children>
+              </tagNode>
+              #include <include/bgp/reset-bgp-afi-common.xml.i>
+              #include <include/bgp/reset-bgp-peer-group.xml.i>
+              <tagNode name="vrf">
+                <properties>
+                  <help>Clear BGP statistics or status for vrf</help>
+                  <completionHelp>
+                    <path>vrf name</path>
+                  </completionHelp>
+                </properties>
+                <children>
+                  <node name="all">
+                    <properties>
+                      <help>Clear all BGP peering sessions for vrf</help>
+                    </properties>
+                    <command>${dozenos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </node>
+                  <virtualTagNode>
+                    <properties>
+                      <help>Clear BGP neighbor IP address</help>
+                      <completionHelp>
+                        <list>&lt;x.x.x.x&gt;</list>
+                      </completionHelp>
+                    </properties>
+                    <command>${dozenos_op_scripts_dir}/bgp.py reset --command="$*"</command>
+                    <children>
+                      #include <include/bgp/reset-bgp-neighbor-options.xml.i>
+                    </children>
+                  </virtualTagNode>
+                </children>
+              </tagNode>
+            </children>
+          </node>
+       </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

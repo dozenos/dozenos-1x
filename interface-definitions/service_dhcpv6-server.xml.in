@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="service">
+    <children>
+      <node name="dhcpv6-server" owner="${dozenos_conf_scripts_dir}/service_dhcpv6-server.py">
+        <properties>
+          <help>DHCP for IPv6 (DHCPv6) server</help>
+          <priority>900</priority>
+        </properties>
+        <children>
+          #include <include/dhcp/dhcpv6-server-common-config.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

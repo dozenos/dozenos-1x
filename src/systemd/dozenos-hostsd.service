@@ -1,0 +1,34 @@
+[Unit]
+Description=DozenOS DNS configuration keeper
+
+# Without this option, lots of default dependencies are added,
+# among them network.target, which creates a dependency cycle
+DefaultDependencies=no
+
+# Seemingly sensible way to say "as early as the system is ready"
+# All dozenos-hostsd needs is read/write mounted root
+After=systemd-remount-fs.service cloud-init.service
+
+[Service]
+WorkingDirectory=/run/dozenos-hostsd
+RuntimeDirectory=dozenos-hostsd
+RuntimeDirectoryPreserve=yes
+ExecStart=/usr/bin/python3 -u /usr/libexec/dozenos/services/dozenos-hostsd
+Type=idle
+KillMode=process
+
+SyslogIdentifier=dozenos-hostsd
+SyslogFacility=daemon
+
+Restart=on-failure
+
+# Does't work in Jessie but leave it here
+User=root
+Group=hostsd
+
+[Install]
+
+# Note: After= doesn't actually create a dependency,
+# it just sets order for the case when both services are to start,
+# and without RequiredBy it *does not* set dozenos-hostsd to start.
+RequiredBy=cloud-init-local.service dozenos-router.service

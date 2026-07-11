@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<interfaceDefinition>
+  <node name="protocols">
+    <children>
+      <node name="rpki" owner="${dozenos_conf_scripts_dir}/protocols_rpki.py">
+        <properties>
+          <help>Resource Public Key Infrastructure (RPKI)</help>
+          <priority>819</priority>
+        </properties>
+        <children>
+          #include <include/rpki/protocol-common-config.xml.i>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

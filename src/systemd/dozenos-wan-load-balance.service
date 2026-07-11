@@ -1,0 +1,11 @@
+[Unit]
+Description=DozenOS WAN Load Balancer
+After=dozenos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/dozenos/dozenos-load-balancer.py
+
+[Install]
+WantedBy=multi-user.target

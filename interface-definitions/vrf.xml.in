@@ -1,0 +1,171 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="vrf" owner="${dozenos_conf_scripts_dir}/vrf.py">
+    <properties>
+      <help>Virtual Routing and Forwarding</help>
+      <!-- must be before any interface, check /usr/libexec/dozenos/priority.py -->
+      <priority>11</priority>
+    </properties>
+    <children>
+      <leafNode name="bind-to-all">
+        <properties>
+          <help>Enable binding services to all VRFs</help>
+          <valueless/>
+        </properties>
+      </leafNode>
+      <tagNode name="name">
+        <properties>
+          <help>Virtual Routing and Forwarding instance</help>
+          #include <include/constraint/vrf.xml.i>
+          <valueHelp>
+            <format>txt</format>
+            <description>VRF instance name</description>
+          </valueHelp>
+        </properties>
+        <children>
+          #include <include/generic-description.xml.i>
+          #include <include/interface/disable.xml.i>
+          <node name="ip">
+            <properties>
+              <help>IPv4 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/disable-forwarding.xml.i>
+              #include <include/system-ip-nht.xml.i>
+              #include <include/system-ip-protocol.xml.i>
+            </children>
+          </node>
+          <node name="ipv6">
+            <properties>
+              <help>IPv6 routing parameters</help>
+            </properties>
+            <children>
+              #include <include/interface/disable-forwarding.xml.i>
+              #include <include/system-ip-nht.xml.i>
+              #include <include/system-ipv6-protocol.xml.i>
+            </children>
+          </node>
+          <node name="protocols">
+            <properties>
+              <help>Routing protocol parameters</help>
+            </properties>
+            <children>
+              <node name="bgp" owner="${dozenos_conf_scripts_dir}/protocols_bgp.py $VAR(../../@)">
+                <properties>
+                  <help>Border Gateway Protocol (BGP)</help>
+                  <priority>821</priority>
+                </properties>
+                <children>
+                  #include <include/bgp/protocol-common-config.xml.i>
+                </children>
+              </node>
+              <node name="eigrp" owner="${dozenos_conf_scripts_dir}/protocols_eigrp.py $VAR(../../@)">
+                <properties>
+                  <help>Enhanced Interior Gateway Routing Protocol (EIGRP)</help>
+                  <priority>821</priority>
+                </properties>
+                <children>
+                  #include <include/eigrp/protocol-common-config.xml.i>
+                </children>
+              </node>
+              <node name="isis" owner="${dozenos_conf_scripts_dir}/protocols_isis.py $VAR(../../@)">
+                <properties>
+                  <help>Intermediate System to Intermediate System (IS-IS)</help>
+                  <priority>611</priority>
+                </properties>
+                <children>
+                  #include <include/isis/protocol-common-config.xml.i>
+                </children>
+              </node>
+              <node name="ospf" owner="${dozenos_conf_scripts_dir}/protocols_ospf.py $VAR(../../@)">
+                <properties>
+                  <help>Open Shortest Path First (OSPF)</help>
+                  <priority>621</priority>
+                </properties>
+                <children>
+                  #include <include/ospf/protocol-common-config.xml.i>
+                </children>
+              </node>
+              <node name="ospfv3" owner="${dozenos_conf_scripts_dir}/protocols_ospfv3.py $VAR(../../@)">
+                <properties>
+                  <help>Open Shortest Path First (OSPF) for IPv6</help>
+                  <priority>621</priority>
+                </properties>
+                <children>
+                  #include <include/ospfv3/protocol-common-config.xml.i>
+                </children>
+              </node>
+              <node name="rpki" owner="${dozenos_conf_scripts_dir}/protocols_rpki.py $VAR(../../@)">
+                <properties>
+                  <help>Resource Public Key Infrastructure (RPKI)</help>
+                  <priority>820</priority>
+                </properties>
+                <children>
+                  #include <include/rpki/protocol-common-config.xml.i>
+                </children>
+              </node>
+              <node name="static" owner="${dozenos_conf_scripts_dir}/protocols_static.py $VAR(../../@)">
+                <properties>
+                  <help>Static Routing</help>
+                  <priority>481</priority>
+                </properties>
+                <children>
+                  #include <include/static/static-route.xml.i>
+                  #include <include/static/static-route6.xml.i>
+                </children>
+              </node>
+              <node name="failover" owner="${dozenos_conf_scripts_dir}/protocols_failover.py $VAR(../../@)">
+                <properties>
+                  <help>Failover Routing</help>
+                  <priority>491</priority>
+                </properties>
+                <children>
+                  #include <include/failover/protocol-common-config.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+          <node name="service">
+            <properties>
+              <help>Enable services in the vrf itself</help>
+            </properties>
+            <children>
+              <node name="dhcp-server" owner="${dozenos_conf_scripts_dir}/service_dhcp-server.py $VAR(../../@)">
+                <properties>
+                  <help>Dynamic Host Configuration Protocol (DHCP) for DHCP server</help>
+                  <priority>912</priority>
+                </properties>
+                <children>
+                  #include <include/dhcp/dhcp-server-common-config.xml.i>
+                </children>
+              </node>
+              <node name="dhcpv6-server" owner="${dozenos_conf_scripts_dir}/service_dhcpv6-server.py $VAR(../../@)">
+                <properties>
+                  <help>DHCP for IPv6 (DHCPv6) server</help>
+                  <priority>901</priority>
+                </properties>
+                <children>
+                  #include <include/dhcp/dhcpv6-server-common-config.xml.i>
+                </children>
+              </node>
+            </children>
+          </node>
+          <leafNode name="table">
+            <properties>
+              <help>Routing table associated with this instance</help>
+              <valueHelp>
+                <format>u32:100-65535</format>
+                <description>Routing table ID</description>
+              </valueHelp>
+              <constraint>
+                <validator name="numeric" argument="--range 100-65535"/>
+              </constraint>
+              <constraintErrorMessage>VRF routing table must be in range from 100 to 65535</constraintErrorMessage>
+            </properties>
+          </leafNode>
+          #include <include/vni.xml.i>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

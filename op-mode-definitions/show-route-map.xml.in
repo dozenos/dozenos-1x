@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="show">
+    <children>
+      <tagNode name="route-map">
+        <properties>
+          <help>Show specified route-map information</help>
+          <completionHelp>
+            <path>policy route-map</path>
+          </completionHelp>
+        </properties>
+        <command>vtysh -c "show route-map $3"</command>
+        <standalone>
+          <help>Show route map information</help>
+          <command>vtysh -c "show route-map"</command>
+        </standalone>
+      </tagNode>
+    </children>
+  </node>
+</interfaceDefinition>

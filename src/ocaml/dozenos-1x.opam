@@ -1,0 +1,21 @@
+opam-version: "2.0"
+name: "dozenos-1x"
+version: "0.0.4"
+synopsis: "DozenOS utils"
+description: """
+A collection of validators and completion helpers.
+"""
+maintainer: "Daniil Baturin <daniil@baturin.org>"
+authors: "DozenOS maintainers and contributors <maintainers@dozenos.local>"
+license: "MIT"
+homepage: "https://github.com/dozenos/dozenos-1x"
+bug-reports: "https://dozenos.dev"
+dev-repo: "git+https://github.com/dozenos/dozenos-1x/"
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name]
+]
+depends: [
+  "ocamlfind" {build}
+  "dune" {build & >= "2.0"}
+]

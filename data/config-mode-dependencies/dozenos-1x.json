@@ -1,0 +1,150 @@
+{
+    "system_conntrack": {
+        "conntrack_sync": ["service_conntrack-sync"],
+        "vrf": ["vrf"]
+    },
+    "firewall": {
+        "conntrack": ["system_conntrack"],
+        "group_resync": ["system_conntrack", "nat", "nat66", "policy_route", "load-balancing_wan"]
+    },
+    "interfaces_bonding": {
+        "ethernet": ["interfaces_ethernet"],
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_bridge": {
+        "vxlan": ["interfaces_vxlan"],
+        "wlan": ["interfaces_wireless"],
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_dummy": {
+        "firewall": ["firewall"]
+    },
+    "interfaces_ethernet": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_geneve": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_l2tpv3": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_macsec": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_openvpn": {
+        "firewall": ["firewall"]
+    },
+    "interfaces_pppoe": {
+        "firewall": ["firewall"]
+    },
+    "interfaces_pseudo_ethernet": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_sstpc": {
+        "firewall": ["firewall"]
+    },
+    "interfaces_tunnel": {
+        "firewall": ["firewall"]
+    },
+    "interfaces_virtual_ethernet": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_vti": {
+        "firewall": ["firewall"]
+    },
+    "interfaces_vxlan": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_wireless": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_wwan": {
+        "firewall": ["firewall"],
+        "static_arp": ["protocols_static_arp"]
+    },
+    "interfaces_wireguard": {
+        "firewall": ["firewall"],
+        "vxlan": ["interfaces_vxlan"]
+    },
+    "load_balancing_wan": {
+        "conntrack": ["system_conntrack"]
+    },
+    "nat": {
+        "conntrack": ["system_conntrack"]
+    },
+    "nat66": {
+        "conntrack": ["system_conntrack"]
+    },
+    "pki": {
+        "ethernet": ["interfaces_ethernet"],
+        "openvpn": ["interfaces_openvpn"],
+        "haproxy": ["load-balancing_haproxy"],
+        "https": ["service_https"],
+        "ipsec": ["vpn_ipsec"],
+        "openconnect": ["vpn_openconnect"],
+        "rpki": ["protocols_rpki"],
+        "ssh": ["service_ssh"],
+        "sstp": ["vpn_sstp"],
+        "sstpc": ["interfaces_sstpc"],
+        "stunnel": ["service_stunnel"]
+    },
+    "vpn_ipsec": {
+        "nhrp": ["protocols_nhrp"]
+    },
+    "vpn_l2tp": {
+        "ipsec": ["vpn_ipsec"]
+    },
+    "qos": {
+        "bonding": ["interfaces_bonding"],
+        "bridge": ["interfaces_bridge"],
+        "dummy": ["interfaces_dummy"],
+        "ethernet": ["interfaces_ethernet"],
+        "geneve": ["interfaces_geneve"],
+        "input": ["interfaces_input"],
+        "l2tpv3": ["interfaces_l2tpv3"],
+        "loopback": ["interfaces_loopback"],
+        "macsec": ["interfaces_macsec"],
+        "openvpn": ["interfaces_openvpn"],
+        "pppoe": ["interfaces_pppoe"],
+        "pseudo-ethernet": ["interfaces_pseudo-ethernet"],
+        "tunnel": ["interfaces_tunnel"],
+        "vti": ["interfaces_vti"],
+        "vxlan": ["interfaces_vxlan"],
+        "wireguard": ["interfaces_wireguard"],
+        "wireless": ["interfaces_wireless"],
+        "wwan": ["interfaces_wwan"]
+    },
+    "system_wireless": {
+        "wireless": ["interfaces_wireless"]
+    },
+    "system_ip": {
+        "sysctl": ["system_sysctl"]
+    },
+    "system_ipv6": {
+        "sysctl": ["system_sysctl"]
+    },
+    "system_login": {
+        "ssh": ["service_ssh"]
+    },
+    "system_option": {
+        "ip_ipv6": ["system_ip", "system_ipv6"],
+        "firewall": ["firewall"],
+        "sysctl": ["system_sysctl"]
+    },
+    "system_logs": {
+        "syslog": ["system_syslog"]
+    },
+    "system_sflow": {
+        "vpp_sflow": ["vpp_sflow"]
+    }
+}

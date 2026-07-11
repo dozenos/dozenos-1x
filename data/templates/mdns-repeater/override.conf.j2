@@ -1,0 +1,7 @@
+[Unit]
+After=dozenos-router.service
+ConditionPathExists={{ config_file }}
+
+[Service]
+ExecStart=
+ExecStart=/usr/sbin/avahi-daemon --syslog --file {{ config_file }}

@@ -1,0 +1,14 @@
+[Unit]
+Description=Update GRUB loader configuration structure
+After=local-fs.target
+Before=dozenos-router.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/dozenos/system/grub_update.py
+TimeoutSec=60
+KillMode=process
+StandardOutput=journal+console
+
+[Install]
+WantedBy=dozenos-router.service

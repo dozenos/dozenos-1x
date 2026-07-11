@@ -1,0 +1,12 @@
+[Unit]
+Description=DozenOS root partition auto resizing
+After=multi-user.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/libexec/dozenos/op_mode/force_root-partition-auto-resize.sh 
+
+[Install]
+WantedBy=dozenos.target

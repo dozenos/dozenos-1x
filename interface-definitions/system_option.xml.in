@@ -1,0 +1,452 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="system">
+    <children>
+      <node name="option" owner="${dozenos_conf_scripts_dir}/system_option.py">
+        <properties>
+          <help>System Options</help>
+          <priority>9999</priority>
+        </properties>
+        <children>
+          <leafNode name="ctrl-alt-delete">
+            <properties>
+              <help>System action on Ctrl-Alt-Delete keystroke</help>
+              <completionHelp>
+                <list>ignore reboot poweroff</list>
+              </completionHelp>
+              <valueHelp>
+                <format>ignore</format>
+                <description>Ignore key sequence</description>
+              </valueHelp>
+              <valueHelp>
+                <format>reboot</format>
+                <description>Reboot system</description>
+              </valueHelp>
+              <valueHelp>
+                <format>poweroff</format>
+                <description>Poweroff system</description>
+              </valueHelp>
+              <constraint>
+                <regex>(ignore|reboot|poweroff)</regex>
+              </constraint>
+              <constraintErrorMessage>Must be ignore, reboot, or poweroff</constraintErrorMessage>
+            </properties>
+           </leafNode>
+           <node name="resource-limits">
+             <properties>
+               <help>Resource limits</help>
+             </properties>
+             <children>
+               <leafNode name="max-map-count">
+                 <properties>
+                   <help>Maximum number of memory map areas a process may have</help>
+                   <valueHelp>
+                     <format>u32:65530-2147483647</format>
+                     <description>Areas count</description>
+                   </valueHelp>
+                   <valueHelp>
+                     <format>auto</format>
+                     <description>Auto calculate areas count based on number of hugepages</description>
+                   </valueHelp>
+                   <constraint>
+                     <regex>(auto)</regex>
+                     <validator name="numeric" argument="--range 65530-2147483647"/>
+                   </constraint>
+                 </properties>
+                 <defaultValue>auto</defaultValue>
+               </leafNode>
+               <leafNode name="shmmax">
+                 <properties>
+                   <help>Maximum shared memory segment size that can be created</help>
+                   <valueHelp>
+                     <format>u64:8589934592-18446744073709551615</format>
+                     <description>Size in bytes</description>
+                   </valueHelp>
+                   <valueHelp>
+                     <format>auto</format>
+                     <description>Auto calculate shared memory based on number of hugepages</description>
+                   </valueHelp>
+                   <constraint>
+                     <regex>(auto)</regex>
+                     <validator name="numeric" argument="--range 8589934592-18446744073709551615"/>
+                   </constraint>
+                 </properties>
+                 <defaultValue>auto</defaultValue>
+               </leafNode>
+             </children>
+           </node>
+           <node name="kernel">
+             <properties>
+               <help>Kernel boot parameters</help>
+             </properties>
+             <children>
+              <node name="cpu">
+                <properties>
+                  <help>CPU settings</help>
+                </properties>
+                <children>
+                  <leafNode name="disable-nmi-watchdog">
+                    <properties>
+                      <help>Disable the NMI watchdog for detecting hard CPU lockups</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="isolate-cpus">
+                    <properties>
+                      <help>Isolate specified CPUs from the scheduler</help>
+                      <valueHelp>
+                        <format>u32:0-511</format>
+                        <description>CPU core</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;start-end&gt;</format>
+                        <description>CPU core range (examples: "1", "4-7", "1,2-5,7")</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="cpu"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="nohz-full">
+                    <properties>
+                      <help>Enable full tickless mode for specified CPUs</help>
+                      <valueHelp>
+                        <format>u32:0-511</format>
+                        <description>CPU core</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;start-end&gt;</format>
+                        <description>CPU core range (examples: "1", "4-7", "1,2-5,7")</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="cpu"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="rcu-no-cbs">
+                    <properties>
+                      <help>Offload Read-Copy-Update (RCU) callback processing to specified CPUs</help>
+                      <valueHelp>
+                        <format>u32:0-511</format>
+                        <description>CPU core</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>&lt;start-end&gt;</format>
+                        <description>CPU core range (examples: "1", "4-7", "1,2-5,7")</description>
+                      </valueHelp>
+                      <constraint>
+                        <validator name="cpu"/>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+              <node name="memory">
+                <properties>
+                  <help>Memory settings</help>
+                </properties>
+                <children>
+                  <leafNode name="disable-numa-balancing">
+                    <properties>
+                      <help>Disable automatic NUMA memory balancing</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                  <leafNode name="default-hugepage-size">
+                    <properties>
+                      <help>Set default hugepage size (e.g., 2M, 1G)</help>
+                      <completionHelp>
+                        <list>2M 1G</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>2M</format>
+                        <description>2 megabytes</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>1G</format>
+                        <description>1 gigabyte</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(2M|1G)</regex>
+                      </constraint>
+                    </properties>
+                  </leafNode>
+                  <tagNode name="hugepage-size">
+                    <properties>
+                      <help>Set hugepage size for allocation (e.g., 2M, 1G)</help>
+                      <completionHelp>
+                        <list>2M 1G</list>
+                      </completionHelp>
+                      <valueHelp>
+                        <format>2M</format>
+                        <description>2 megabytes</description>
+                      </valueHelp>
+                      <valueHelp>
+                        <format>1G</format>
+                        <description>1 gigabyte</description>
+                      </valueHelp>
+                      <constraint>
+                        <regex>(2M|1G)</regex>
+                      </constraint>
+                    </properties>
+                    <children>
+                      <leafNode name="hugepage-count">
+                        <properties>
+                          <help>Allocate number of hugepages for system use</help>
+                          <valueHelp>
+                            <format>u32</format>
+                            <description>Number of hugepages</description>
+                          </valueHelp>
+                          <constraint>
+                            <validator name="numeric" argument="--range 1-100000"/>
+                          </constraint>
+                        </properties>
+                      </leafNode>
+                    </children>
+                  </tagNode>
+                </children>
+              </node>
+              <leafNode name="disable-hpet">
+                 <properties>
+                   <help>Disable High Precision Event Timer (HPET)</help>
+                   <valueless/>
+                 </properties>
+               </leafNode>
+              <leafNode name="disable-mce">
+                 <properties>
+                   <help>Disable Machine Check Exceptions (MCE) reporting and handling</help>
+                   <valueless/>
+                 </properties>
+               </leafNode>
+              <leafNode name="disable-mitigations">
+                 <properties>
+                   <help>Disable all optional CPU mitigations</help>
+                   <valueless/>
+                 </properties>
+               </leafNode>
+               <leafNode name="disable-power-saving">
+                <properties>
+                  <help>Disable CPU power saving mechanisms also known as C states</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="amd-pstate-driver">
+                <properties>
+                  <help>Enables and configures pstate driver for AMD Ryzen and Epyc CPUs</help>
+                  <completionHelp>
+                    <list>active passive guided</list>
+                  </completionHelp>
+                  <valueHelp>
+                    <format>active</format>
+                    <description>The firmware controls performance states and the system governor has no effect</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>passive</format>
+                    <description>Allow the system governor to manage performance states</description>
+                  </valueHelp>
+                  <valueHelp>
+                    <format>guided</format>
+                    <description>The firmware controls performance states guided by the system governor</description>
+                  </valueHelp>
+                </properties>
+              </leafNode>
+              <leafNode name="disable-softlockup">
+                <properties>
+                  <help>Disable soft lockup detector for kernel threads</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <leafNode name="quiet">
+                <properties>
+                  <help>Disable most log messages</help>
+                  <valueless/>
+                </properties>
+              </leafNode>
+              <node name="debug">
+                <properties>
+                  <help>Dynamic debugging for kernel module</help>
+                </properties>
+                <children>
+                  <leafNode name="wireguard">
+                    <properties>
+                      <help>Dynamic debugging for Wireguard module</help>
+                      <valueless/>
+                    </properties>
+                  </leafNode>
+                </children>
+              </node>
+             </children>
+           </node>
+           <leafNode name="keyboard-layout">
+             <properties>
+               <help>System keyboard layout, type ISO2</help>
+               <completionHelp>
+                 <list>us uk fr de es fi it jp106 no dk se-latin1 dvorak</list>
+               </completionHelp>
+               <valueHelp>
+                 <format>us</format>
+                 <description>United States</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>uk</format>
+                 <description>United Kingdom</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>fr</format>
+                 <description>France</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>de</format>
+                 <description>Germany</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>es</format>
+                 <description>Spain</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>fi</format>
+                 <description>Finland</description>
+               </valueHelp>
+               <valueHelp>
+                <format>it</format>
+                <description>Italy</description>
+              </valueHelp>
+               <valueHelp>
+                 <format>jp106</format>
+                 <description>Japan</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>no</format>
+                 <description>Norway</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>dk</format>
+                 <description>Denmark</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>se-latin1</format>
+                 <description>Sweden</description>
+               </valueHelp>
+               <valueHelp>
+                 <format>dvorak</format>
+                 <description>Dvorak</description>
+               </valueHelp>
+               <constraint>
+                <regex>(us|uk|fr|de|es|fi|it|jp106|no|dk|se-latin1|dvorak)</regex>
+              </constraint>
+              <constraintErrorMessage>Invalid keyboard layout</constraintErrorMessage>
+             </properties>
+             <defaultValue>us</defaultValue>
+           </leafNode>
+           <leafNode name="performance">
+            <properties>
+              <help>Tune system performance</help>
+              <completionHelp>
+                <list>network-throughput network-latency power-save virtual-host virtual-guest</list>
+              </completionHelp>
+              <valueHelp>
+                <format>network-throughput</format>
+                <description>Tune for maximum network throughput</description>
+              </valueHelp>
+              <valueHelp>
+                <format>network-latency</format>
+                <description>Tune for low network latency</description>
+              </valueHelp>
+              <valueHelp>
+                <format>power-save</format>
+                <description>Tune for low power consumption</description>
+              </valueHelp>
+              <valueHelp>
+                <format>virtual-guest</format>
+                <description>Tune for running inside a virtual machine</description>
+              </valueHelp>
+              <valueHelp>
+                <format>virtual-host</format>
+                <description>Tune for running guest virtual machines</description>
+              </valueHelp>
+              <constraint>
+                <regex>(network-throughput|network-latency|power-save|virtual-guest|virtual-host)</regex>
+              </constraint>
+              <multi/>
+            </properties>
+           </leafNode>
+           <node name="http-client">
+             <properties>
+               <help>Global options used for HTTP client</help>
+             </properties>
+             <children>
+               #include <include/source-interface.xml.i>
+               #include <include/source-address-ipv4-ipv6.xml.i>
+             </children>
+           </node>
+           <leafNode name="reboot-on-panic">
+             <properties>
+               <help>Reboot system on kernel panic</help>
+               <valueless/>
+             </properties>
+           </leafNode>
+           <leafNode name="reboot-on-upgrade-failure">
+             <properties>
+               <help>Automatic reboot into previous running image on upgrade failure</help>
+               <valueHelp>
+                 <format>u32:1-30</format>
+                 <description>Timeout before automatic reboot (minutes)</description>
+               </valueHelp>
+               <constraint>
+                 <validator name="numeric" argument="--range 5-30"/>
+               </constraint>
+               <constraintErrorMessage>Timeout out of range, must be 5 to 30 minutes</constraintErrorMessage>
+             </properties>
+           </leafNode>
+           <node name="ssh-client">
+             <properties>
+               <help>Global options used for SSH client</help>
+             </properties>
+             <children>
+               #include <include/source-address-ipv4-ipv6.xml.i>
+               #include <include/source-interface.xml.i>
+             </children>
+           </node>
+           <leafNode name="startup-beep">
+             <properties>
+               <help>plays sound via system speaker when you can login</help>
+               <valueless/>
+             </properties>
+           </leafNode>
+           <leafNode name="root-partition-auto-resize">
+             <properties>
+               <help>Enable root partition auto-extension on system boot</help>
+               <valueless/>
+             </properties>
+           </leafNode>
+           <leafNode name="time-format">
+            <properties>
+              <help>System time-format</help>
+              <completionHelp>
+                <list>12-hour 24-hour</list>
+              </completionHelp>
+              <valueHelp>
+                <format>12-hour</format>
+                <description>12 hour time format</description>
+              </valueHelp>
+              <valueHelp>
+                <format>24-hour</format>
+                <description>24 hour time format</description>
+              </valueHelp>
+              <constraint>
+                <regex>(12-hour|24-hour)</regex>
+              </constraint>
+            </properties>
+            <defaultValue>12-hour</defaultValue>
+           </leafNode>
+           <leafNode name="disable-usb-autosuspend">
+            <properties>
+              <help>Disable autosuspend for all USB devices</help>
+              <valueless/>
+            </properties>
+           </leafNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

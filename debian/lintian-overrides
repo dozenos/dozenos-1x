@@ -1,0 +1,6 @@
+# It's FSH compliant!
+dozenos-1x: file-in-unusual-dir usr/libexec/*
+dozenos-1x: non-standard-dir-in-usr usr/libexec/
+
+# Nothing we can do about that right now
+dozenos-1x: dir-or-file-in-opt

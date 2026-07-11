@@ -1,0 +1,16 @@
+[Unit]
+Description=DozenOS firewall domain resolver
+After=dozenos-router.service
+ConditionPathExistsGlob=/run/use-dozenos-domain-resolver*
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 -u /usr/libexec/dozenos/services/dozenos-domain-resolver
+SyslogIdentifier=dozenos-domain-resolver
+SyslogFacility=daemon
+StandardError=journal
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

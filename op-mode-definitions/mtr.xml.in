@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <tagNode name="traceroute">
+        <properties>
+          <help>Monitor Traceroute and ping path to target</help>
+          <completionHelp>
+            <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+          </completionHelp>
+        </properties>
+        <command>${dozenos_op_scripts_dir}/mtr.py ${@:3}</command>
+        <children>
+          <virtualTagNode>
+            <properties>
+              <help>Traceroute options</help>
+              <completionHelp>
+                <script>${dozenos_op_scripts_dir}/mtr.py --get-options-nested "${COMP_WORDS[@]}"</script>
+              </completionHelp>
+            </properties>
+            <command>${dozenos_op_scripts_dir}/mtr.py ${@:3}</command>
+          </virtualTagNode>
+        </children>
+      </tagNode>
+    </children>
+  </node>
+  <tagNode name="mtr">
+    <properties>
+      <help>Monitor Traceroute and ping path to target</help>
+      <completionHelp>
+        <list>&lt;hostname&gt; &lt;x.x.x.x&gt; &lt;h:h:h:h:h:h:h:h&gt;</list>
+      </completionHelp>
+    </properties>
+    <command>${dozenos_op_scripts_dir}/mtr.py ${@:2}</command>
+    <children>
+      <virtualTagNode>
+        <properties>
+          <help>mtr options</help>
+          <completionHelp>
+            <script>${dozenos_op_scripts_dir}/mtr.py --get-options "${COMP_WORDS[@]}"</script>
+          </completionHelp>
+        </properties>
+        <command>${dozenos_op_scripts_dir}/mtr.py ${@:2}</command>
+      </virtualTagNode>
+    </children>
+  </tagNode>
+</interfaceDefinition>

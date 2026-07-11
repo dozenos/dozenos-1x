@@ -1,0 +1,5 @@
+{% if authentication.mode is dozenos_defined('local') %}
+chap-secrets
+{% elif authentication.mode is dozenos_defined('radius') %}
+radius
+{% endif %}

@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="clear">
+    <children>
+      <node name="ipv6">
+        <properties>
+          <help>Clear Internet Protocol (IPv6) statistics or status</help>
+        </properties>
+        <children>
+          <tagNode name="prefix-list">
+            <properties>
+              <help>Clear prefix-list statistics or status for specified word</help>
+              <completionHelp>
+                <list>WORD</list>
+              </completionHelp>
+            </properties>
+            <standalone>
+              <help>Clear prefix-list statistics or status</help>
+              <command>vtysh -c "$*"</command>
+            </standalone>
+            <command>vtysh -c "$*"</command>
+            <children>
+              <virtualTagNode>
+                <properties>
+                  <help>Clear prefix-list statistics or status for given word|network</help>
+                  <completionHelp>
+                    <list>&lt;h:h:h:h:h:h:h:h/x&gt;</list>
+                  </completionHelp>
+                </properties>
+                <command>vtysh -c "$*"</command>
+              </virtualTagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

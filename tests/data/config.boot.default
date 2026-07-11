@@ -1,0 +1,40 @@
+system {
+    host-name dozenos
+    login {
+        user dozenos {
+            authentication {
+                encrypted-password $6$yZVjYAbQvl5kCSw0$XXgtzG1uFVisp80BHYks5bTHdlisjZTbMFWcROXtFkvGUCGXRUQ2x8kv0BQrpKSkM79Gib1zpfPm5pWFY8bqW1
+                plaintext-password ""
+            }
+            level admin
+        }
+    }
+    syslog {
+        global {
+            facility all {
+                level notice
+            }
+            facility protocols {
+                level debug
+            }
+        }
+    }
+    ntp {
+        server "0.pool.ntp.org"
+        server "1.pool.ntp.org"
+        server "2.pool.ntp.org"
+    }
+    console {
+        device ttyS0 {
+            speed 9600
+        }
+    }
+    config-management {
+        commit-revisions 100
+    }
+}
+
+interfaces {
+    loopback lo {
+    }
+}

@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+#
+# Copyright VyOS maintainers and contributors <maintainers@vyos.io>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 or later as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from sys import exit
+
+from dozenos.config import Config
+from dozenos.configdep import set_dependents
+from dozenos.configdep import call_dependents
+from dozenos.configdict import get_interface_dict
+from dozenos.configdict import is_source_interface
+from dozenos.configdict import is_node_changed
+from dozenos.configdict import is_vrf_changed
+from dozenos.configverify import verify_vrf
+from dozenos.configverify import verify_address
+from dozenos.configverify import verify_bridge_delete
+from dozenos.configverify import verify_source_interface
+from dozenos.configverify import verify_vlan_config
+from dozenos.configverify import verify_mtu_parent
+from dozenos.configverify import verify_mtu_ipv6
+from dozenos.configverify import verify_mirror_redirect
+from dozenos.ifconfig import MACVLANIf
+from dozenos.utils.network import interface_exists
+from dozenos import ConfigError
+
+from dozenos import airbag
+airbag.enable()
+
+def get_config(config=None):
+    """
+    Retrieve CLI config as dictionary. Dictionary can never be empty, as at
+    least the interface name will be added or a deleted flag
+    """
+    if config:
+        conf = config
+    else:
+        conf = Config()
+    base = ['interfaces', 'pseudo-ethernet']
+    ifname, peth = get_interface_dict(conf, base)
+
+    mode = is_node_changed(conf, ['mode'])
+    if mode: peth.update({'shutdown_required' : {}})
+
+    if is_node_changed(conf, base + [ifname, 'mode']):
+        peth.update({'rebuild_required': {}})
+
+    if 'source_interface' in peth:
+        _, peth['parent'] = get_interface_dict(conf, ['interfaces', 'ethernet'],
+                                               peth['source_interface'])
+        # test if source-interface is maybe already used by another interface
+        tmp = is_source_interface(conf, peth['source_interface'], ['macsec'])
+        if tmp and tmp != ifname: peth.update({'is_source_interface' : tmp})
+
+    # Protocols static arp dependency
+    if 'static_arp' in peth:
+        set_dependents('static_arp', conf)
+
+    # Check vrf membership, to ensure firewall is updated
+    if is_vrf_changed(conf, ifname):
+        set_dependents('firewall', conf)
+
+    return peth
+
+def _verify_anycast_gateway(peth: dict):
+    """Validate anycast-gateway requirements."""
+
+    if 'anycast_gateway' not in peth:
+        return
+
+    ifname = peth['ifname']
+
+    # Requirement 1: MAC address must be explicitly configured
+    if 'mac' not in peth:
+        raise ConfigError(
+            f'Anycast-gateway requires an explicit MAC address to be set on interface {ifname}. '
+            f'Use: set interfaces pseudo-ethernet {ifname} mac <mac>'
+        )
+
+    # Requirement 2: source-interface must be a bridge or bridge sub-interface
+    source_iface = peth.get('source_interface')
+    if not source_iface:
+        raise ConfigError(
+            f'Anycast-gateway requires source-interface to be set on interface {ifname}'
+        )
+
+    if not source_iface.startswith('br'):
+        raise ConfigError(
+            'Anycast-gateway requires source-interface to be a bridge '
+            'or a bridge vlan interface (e.g. br0 or br0.100), but '
+            f'"{source_iface}" is neither of these two.'
+        )
+
+def verify(peth):
+    if 'deleted' in peth:
+        verify_bridge_delete(peth)
+        return None
+
+    verify_source_interface(peth)
+    verify_vrf(peth)
+    verify_address(peth)
+    verify_mtu_parent(peth, peth['parent'])
+    verify_mtu_ipv6(peth)
+    verify_mirror_redirect(peth)
+    # use common function to verify VLAN configuration
+    verify_vlan_config(peth)
+
+    _verify_anycast_gateway(peth)
+
+    return None
+
+def generate(peth):
+    return None
+
+def apply(peth):
+    # Check if the MACVLAN interface already exists
+    if 'rebuild_required' in peth or 'deleted' in peth:
+        if interface_exists(peth['ifname']):
+            p = MACVLANIf(**peth)
+            # MACVLAN is always needs to be recreated,
+            # thus we can simply always delete it first.
+            p.remove()
+
+    if 'deleted' not in peth:
+        p = MACVLANIf(**peth)
+        p.update(peth)
+
+    # run the dependents
+    call_dependents()
+
+    return None
+
+if __name__ == '__main__':
+    try:
+        c = get_config()
+        verify(c)
+        generate(c)
+        apply(c)
+    except ConfigError as e:
+        print(e)
+        exit(1)

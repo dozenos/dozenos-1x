@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="monitor">
+    <children>
+      <node name="traffic">
+        <properties>
+          <help>Monitor traffic dumps</help>
+        </properties>
+        <children>
+          <tagNode name="interface">
+            <command>${dozenos_op_scripts_dir}/tcpdump.py $4</command>
+            <properties>
+              <help>Monitor traffic dump from an interface</help>
+              <completionHelp>
+                <script>${dozenos_completion_dir}/list_dumpable_interfaces.py</script>
+              </completionHelp>
+            </properties>
+            <children>
+              <virtualTagNode>
+                <properties>
+                  <help>Traffic capture options</help>
+                  <completionHelp>
+                    <script>${dozenos_op_scripts_dir}/tcpdump.py --get-options-nested "${COMP_WORDS[@]}"</script>
+                  </completionHelp>
+                </properties>
+                <command>${dozenos_op_scripts_dir}/tcpdump.py "${@:4}"</command>
+              </virtualTagNode>
+            </children>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

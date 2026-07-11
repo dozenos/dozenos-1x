@@ -1,0 +1,34 @@
+{% macro rpki_config(rpki) %}
+{# as FRR does not support deleting the entire rpki section we leave it in place even when it's empty #}
+rpki
+{% if rpki.cache is dozenos_defined %}
+{%     for peer, peer_config in rpki.cache.items() %}
+{#         port is mandatory and preference uses a default value #}
+{%         if peer_config.ssh.username is dozenos_defined %}
+ rpki cache ssh {{ peer | replace('_', '-') }} {{ peer_config.port }} {{ peer_config.ssh.username }} {{ peer_config.ssh.private_key_file }} {{ peer_config.ssh.public_key_file }}{{ ' source ' ~ peer_config.source_address if peer_config.source_address is dozenos_defined }} preference {{ peer_config.preference }}
+{%         else %}
+ rpki cache tcp {{ peer | replace('_', '-') }} {{ peer_config.port }}{{ ' source ' ~ peer_config.source_address if peer_config.source_address is dozenos_defined }} preference {{ peer_config.preference }}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+{% if rpki.expire_interval is dozenos_defined %}
+ rpki expire_interval {{ rpki.expire_interval }}
+{% endif %}
+{% if rpki.polling_period is dozenos_defined %}
+ rpki polling_period {{ rpki.polling_period }}
+{% endif %}
+{% if rpki.retry_interval is dozenos_defined %}
+ rpki retry_interval {{ rpki.retry_interval }}
+{% endif %}
+exit
+{# j2lint: disable=jinja-statements-delimeter #}
+{%- endmacro -%}
+!
+{% if rpki.vrf is dozenos_defined %}
+vrf {{ rpki.vrf }}
+ {{ rpki_config(rpki) | indent(width=1) }}
+exit-vrf
+{% else %}
+{{ rpki_config(rpki) }}
+{% endif %}
+!

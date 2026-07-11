@@ -1,0 +1,31 @@
+!
+router eigrp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is dozenos_defined }}
+{% if maximum_paths is dozenos_defined %}
+ maximum-paths {{ maximum_paths }}
+{% endif %}
+{% if metric.weights is dozenos_defined %}
+ metric weights {{ metric.weights }}
+{% endif %}
+{% if network is dozenos_defined %}
+{%     for net in network %}
+ network {{ net }}
+{%     endfor %}
+{% endif %}
+{% if passive_interface is dozenos_defined %}
+{%     for interface in passive_interface %}
+ passive-interface {{ interface }}
+{%     endfor %}
+{% endif %}
+{% if redistribute is dozenos_defined %}
+{%     for protocol in redistribute %}
+ redistribute {{ protocol }}
+{%     endfor %}
+{% endif %}
+{% if router_id is dozenos_defined %}
+ eigrp router-id {{ router_id }}
+{% endif %}
+{% if variance is dozenos_defined %}
+ variance {{ variance }}
+{% endif %}
+exit
+!

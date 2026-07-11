@@ -1,0 +1,165 @@
+# DozenOS self-sync workflow -- GENERATED FILE, DO NOT HAND-EDIT.
+#
+# Rendered from dozenos-rebrand/sync.yml.template by mirror-push.sh's
+# generate_sync_workflow step on EVERY push of a mirror (seed or sync mode).
+# A hand edit to a mirror's copy is silently overwritten on that mirror's
+# next sync; change the template and/or mirror-push.sh's flag-baking logic
+# instead, and the fix propagates to every mirror as each is pushed (see
+# dozenos-rebrand/SYNC.md).
+#
+# DECENTRALIZED design (dozenos-rebrand/SYNC.md): each dozenos/* mirror
+# syncs ITSELF, daily, from its own upstream (the UPSTREAM_URL variable
+# configured on that repo only -- dozenos-rebrand/CI-SECRETS.md). There is
+# no central sync loop. This copy's baked invocation reproduces the exact
+# mirror-push.sh call that produced this very mirror (minus the upstream
+# URL, which never appears in the mirror tree).
+#
+# Baked mirror-push.sh flags for this repo: --overlay dozenos-rebrand/overlay-dozenos-1x --allow-residuals
+name: DozenOS self-sync
+
+on:
+  schedule:
+    # All mirrors share this cron on purpose -- staggering would break this
+    # template's byte-stability across plain mirrors (SYNC.md).
+    - cron: '17 3 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: dozenos-self-sync-${{ github.repository }}
+  cancel-in-progress: false
+
+# contents: read only -- the self-push below does NOT use this job's own
+# GITHUB_TOKEN: GITHUB_TOKEN categorically cannot create or update
+# .github/workflows/* files (GitHub rejects the push without a `workflows`
+# permission it can never hold). The push authenticates with a
+# runtime-minted org App token instead; the App must hold Contents R/W AND
+# Workflows R/W (CI-SECRETS.md §4).
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this mirror
+        uses: actions/checkout@v7
+
+      # dozenos-rebrand carries the mirror-push.sh engine + (for overlay
+      # mirrors) the per-repo overlay directory this sync re-applies.
+      - name: Checkout dozenos-rebrand
+        uses: actions/checkout@v7
+        with:
+          repository: dozenos/dozenos-rebrand
+          ref: main
+          path: dozenos-rebrand
+
+      - name: Verify UPSTREAM_URL variable is set
+        env:
+          UPSTREAM_URL: ${{ vars.UPSTREAM_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$UPSTREAM_URL" ]; then
+            echo "::error::UPSTREAM_URL variable is not set on this repo -- see dozenos-rebrand/CI-SECRETS.md (per-repo variable holding this repo's upstream mirror-source URL)" >&2
+            exit 1
+          fi
+
+      # `github.event.repository.name` is UNSET on a `schedule` trigger (the
+      # payload carries no `repository` object) -- and schedule is this
+      # workflow's primary trigger, so it can never be used here; manual
+      # workflow_dispatch testing would mask the breakage. GITHUB_REPOSITORY
+      # (runner env, `owner/repo`) is always populated regardless of trigger.
+      - name: Resolve mirror repo name
+        run: |
+          set -euo pipefail
+          echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> "$GITHUB_ENV"
+
+      # The self-push credential -- NOT github.token, which can never touch
+      # .github/workflows/* (see the `permissions:` comment above) while
+      # every mirror's tree carries this very sync.yml. Scoped to exactly
+      # this one repo; minted right before use, and the whole
+      # clone->transform->push pipeline runs well inside the token's ~1h
+      # lifetime.
+      - name: Mint GitHub App token (self-push)
+        id: push_token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BUILD_APP_ID }}
+          private-key: ${{ secrets.BUILD_APP_PRIVATE_KEY }}
+          owner: dozenos
+          repositories: ${{ env.REPO_NAME }}
+
+      # Lets mirror-push.sh's own plain `git clone/push https://github.com/...`
+      # calls authenticate as the App token, without mirror-push.sh needing
+      # any GitHub-auth logic of its own.
+      - name: Configure git auth for self-push
+        env:
+          GH_TOKEN: ${{ steps.push_token.outputs.token }}
+        run: gh auth setup-git
+
+      - name: Run mirror-push.sh (self-sync)
+        id: mirror_push
+        env:
+          UPSTREAM_URL: ${{ vars.UPSTREAM_URL }}
+          GH_TOKEN: ${{ steps.push_token.outputs.token }}
+        run: |
+          set -euo pipefail
+          out_file="$RUNNER_TEMP/mirror-push.out"
+          # Baked in at template-render time; may be empty for a plain
+          # mirror -- intentionally unquoted on the invocation line so an
+          # empty value contributes no argument at all.
+          MIRROR_PUSH_FLAGS="--overlay dozenos-rebrand/overlay-dozenos-1x --allow-residuals"
+          # shellcheck disable=SC2086
+          dozenos-rebrand/mirror-push.sh "$UPSTREAM_URL" \
+            --target "$REPO_NAME" \
+            --branch rolling $MIRROR_PUSH_FLAGS \
+            2>&1 | tee "$out_file"
+          if grep -qF 'no changes vs existing mirror; nothing to sync' "$out_file"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Cross-repo dispatch needs a cross-repo credential -- the self-push
+      # token above is scoped to THIS repo only. Scoped to both possible
+      # dispatch targets (which one is used depends on REPO_NAME, see below;
+      # one mint for both preserves the template's byte-stability across
+      # mirrors).
+      - name: Mint GitHub App token (rebuild/image dispatch)
+        id: app_token
+        if: steps.mirror_push.outputs.changed == 'true'
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BUILD_APP_ID }}
+          private-key: ${{ secrets.BUILD_APP_PRIVATE_KEY }}
+          owner: dozenos
+          repositories: dozenos-build,dozenos-nightly-build
+
+      # Fan-out routing (which dependents need a rebuild) is
+      # rebuild-dispatch.yml's job; this only emits the event carrying this
+      # package's name.
+      - name: Dispatch rebuild
+        if: steps.mirror_push.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          set -euo pipefail
+          # dozenos-build syncing itself is a build-MACHINERY change, not a
+          # package change: it is not a node in dep-graph.json, so a
+          # package-rebuild dispatch for it would resolve to an empty set --
+          # a no-op that would also mean no image-build signal at all now
+          # that image builds are trigger-based. So dozenos-build dispatches
+          # straight to dozenos-nightly-build (gated there by the nightly's
+          # own change-gate fingerprint, which includes dozenos-build);
+          # every other mirror dispatches the normal package-rebuild into
+          # dozenos-build, and the image build follows from that rebuild's
+          # completion dispatch.
+          if [ "$REPO_NAME" = "dozenos-build" ]; then
+            echo "I: this mirror IS dozenos-build -- build-machinery change; dispatching an image rebuild directly (no package-rebuild to resolve)."
+            gh api repos/dozenos/dozenos-nightly-build/dispatches \
+              -f event_type="dozenos-image-build-requested" \
+              -F "client_payload[package]=$REPO_NAME"
+            exit 0
+          fi
+          gh api repos/dozenos/dozenos-build/dispatches \
+            -f event_type="dozenos-package-rebuild" \
+            -F "client_payload[package]=$REPO_NAME"

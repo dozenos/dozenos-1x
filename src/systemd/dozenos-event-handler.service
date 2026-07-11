@@ -1,0 +1,11 @@
+[Unit]
+Description=DozenOS event handler
+After=network.target dozenos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/dozenos/system/dozenos-event-handler.py --config /run/dozenos-event-handler.conf
+
+[Install]
+WantedBy=multi-user.target

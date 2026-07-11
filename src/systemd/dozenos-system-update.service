@@ -1,0 +1,11 @@
+[Unit]
+Description=DozenOS system update-check service
+After=network.target dozenos-router.service
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /usr/libexec/dozenos/system/dozenos-system-update-check.py --config /run/dozenos-system-update.conf
+
+[Install]
+WantedBy=multi-user.target

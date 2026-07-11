@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<interfaceDefinition>
+  <node name="generate">
+    <children>
+      <node name="tech-support">
+        <properties>
+          <help>Generate tech support info</help>
+        </properties>
+        <children>
+          <tagNode name="archive">
+            <properties>
+              <help>Generate tech support archive to defined location</help>
+              <completionHelp>
+                <list> &lt;file&gt; &lt;directory/&gt; &lt;scp://user:passwd@host&gt; &lt;ftp://user:passwd@host&gt;</list>
+              </completionHelp>
+            </properties>
+            <command>${dozenos_op_scripts_dir}/generate_tech-support_archive.py $4</command>
+            <standalone>
+              <help>Generate tech support archive</help>
+              <command>${dozenos_op_scripts_dir}/generate_tech-support_archive.py</command>
+            </standalone>
+          </tagNode>
+          <tagNode name="machine-readable-archive">
+            <properties>
+              <help>Generate tech support archive to defined location</help>
+              <completionHelp>
+                <list> &lt;file&gt; </list>
+              </completionHelp>
+            </properties>
+            <command>${dozenos_op_scripts_dir}/tech_support.py show --raw | gzip > $4.json.gz</command>
+            <standalone>
+              <help>Generate a machine-readable tech support archive</help>
+              <command>${dozenos_op_scripts_dir}/tech_support.py show --raw | gzip> $4.json.gz</command>
+            </standalone>
+          </tagNode>
+        </children>
+      </node>
+    </children>
+  </node>
+</interfaceDefinition>

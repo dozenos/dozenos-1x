@@ -1,0 +1,23 @@
+# These rules use dozenos_net_name to persistently name network interfaces
+# per "hwid" association in the DozenOS configuration file.
+
+ACTION!="add", 				GOTO="dozenos_net_end"
+SUBSYSTEM!="net",			GOTO="dozenos_net_end"
+
+# Do name change for ethernet and wireless devices only
+KERNEL!="eth*|wlan*|e*", 			GOTO="dozenos_net_end"
+
+# ignore "secondary" monitor interfaces of mac80211 drivers
+KERNEL=="wlan*", ATTRS{type}=="803",	GOTO="dozenos_net_end"
+
+# If using DozenOS predefined names
+ENV{DOZENOS_IFNAME}!="eth*",	GOTO="end_dozenos_predef_names"
+
+DRIVERS=="?*", PROGRAM="dozenos_net_name %k $attr{address} $env{DOZENOS_IFNAME}", NAME="%c", GOTO="dozenos_net_end"
+
+LABEL="end_dozenos_predef_names"
+
+# ignore interfaces without a driver link like bridges and VLANs
+DRIVERS=="?*", PROGRAM="dozenos_net_name %k $attr{address}", NAME="%c"
+
+LABEL="dozenos_net_end"
