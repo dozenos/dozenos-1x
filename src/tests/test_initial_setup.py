@@ -33,7 +33,7 @@ class TestInitialSetup(TestCase):
         vis.set_user_password(self.config, 'dozenos', 'dozenosdozenos')
 
         # Old password hash from the default config
-        old_pw = '$6$NfJ1k88mNBeNT/s5$buA/YH21b7raV6mUonph9jiPr4TqUujp0sRQvMm2d5SDF7py2O0EqxN2QL0.797xu7egKJjoZq0EtkDuhXd5c0'
+        old_pw = '$6$ZBypzR20ppqFnqJs$BAqhBcHfnvXoBE7tEkAHjAGEpixFvcWTYthlt.S3kNjF1XkfmoFdxIDBLgZWqQaaW5GjqQITlMt3fYtkdZQ/K0'
         new_pw = self.config.return_value(["system", "login", "user", "dozenos", "authentication", "encrypted-password"])
 
         # Just check it changed the hash, don't try to check if hash is good
