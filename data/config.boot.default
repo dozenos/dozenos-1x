@@ -35,7 +35,7 @@ system {
         }
         user dozenos {
             authentication {
-                encrypted-password "$6$ZBypzR20ppqFnqJs$BAqhBcHfnvXoBE7tEkAHjAGEpixFvcWTYthlt.S3kNjF1XkfmoFdxIDBLgZWqQaaW5GjqQITlMt3fYtkdZQ/K0"
+                encrypted-password "$6$YiLdwiqE0PRuD0Q.$ONlgq2rKNcUtHCsoLL1D8VJ5ouwWJJWeEAPd/Hngl5iE.clqYCYrVvp0F5xORp6Wo1YTqhb8UbNfaZdRUy9/a0"
                 plaintext-password ""
             }
         }
