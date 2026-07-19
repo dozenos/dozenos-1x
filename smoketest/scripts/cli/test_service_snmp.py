@@ -189,11 +189,11 @@ class TestSNMPService(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # commit will alter the CLI values - check if they have been updated:
-        hashed_password = '4e52fe55fd011c9c51ae2c65f4b78ca93dcafdfe'
+        hashed_password = 'f7bd96f7c40818cc0cd36ded48e1dfa5a8efa351'
         tmp = self._session.show_config(base_path + ['v3', 'user', snmpv3_user, 'auth', 'encrypted-password']).split()[1]
         self.assertEqual(tmp, hashed_password)
 
-        hashed_password = '54705c8de9e81fdf61ad7ac044fa8fe611ddff6b'
+        hashed_password = '54d003809561536653710c25d687e2668cd27f1c'
         tmp = self._session.show_config(base_path + ['v3', 'user', snmpv3_user, 'privacy', 'encrypted-password']).split()[1]
         self.assertEqual(tmp, hashed_password)
 
@@ -230,11 +230,11 @@ class TestSNMPService(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # commit will alter the CLI values - check if they have been updated:
-        hashed_password = '4c67690d45d3dfcd33d0d7e308e370ad'
+        hashed_password = '7655fac299e8db6df957cd64e704c095'
         tmp = self._session.show_config(base_path + ['v3', 'user', 'dozenos', 'auth', 'encrypted-password']).split()[1]
         self.assertEqual(tmp, hashed_password)
 
-        hashed_password = 'e11c83f2c510540a3c4de84ee66de440'
+        hashed_password = '3d78bd442755c509bbfa383c9accb201'
         tmp = self._session.show_config(base_path + ['v3', 'user', 'dozenos', 'privacy', 'encrypted-password']).split()[1]
         self.assertEqual(tmp, hashed_password)
 
