@@ -64,7 +64,7 @@ from dozenos.utils.kernel import check_kmod
 from dozenos.utils.kernel import unload_kmod
 from dozenos.utils.process import call
 from dozenos.utils.permission import chown
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.network import is_addr_assigned
 from dozenos.utils.network import interface_exists
 
@@ -849,7 +849,7 @@ def apply(openvpn):
     # or if address will be assign later
     if 'local_host' in openvpn:
         if not is_addr_assigned(openvpn['local_host']):
-            cmd('sysctl -w net.ipv4.ip_nonlocal_bind=1')
+            cmdl(['sysctl', '-w', 'net.ipv4.ip_nonlocal_bind=1'])
 
     # No matching OpenVPN process running - maybe it got killed or none
     # existed - nevertheless, spawn new OpenVPN process

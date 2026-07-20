@@ -24,7 +24,7 @@ import tabulate
 import textwrap
 
 from dozenos.config import Config
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.dict import dict_search_args
 
 signal(SIGPIPE, SIG_DFL)
@@ -68,13 +68,13 @@ def get_nftables_details(family, hook, priority):
         aux=''
 
     if hook == 'name' or hook == 'ipv6-name':
-        command = f'nft list chain {suffix} dozenos_filter {name_prefix}{priority}'
+        command = ['nft', 'list', 'chain', suffix, 'dozenos_filter', f'{name_prefix}{priority}']
     else:
         up_hook = hook.upper()
-        command = f'nft list chain {suffix} dozenos_filter DOZENOS_{aux}{up_hook}_{priority}'
+        command = ['nft', 'list', 'chain', suffix, 'dozenos_filter', f'DOZENOS_{aux}{up_hook}_{priority}']
 
     try:
-        results = cmd(command)
+        results = cmdl(command)
     except:
         return {}
 
@@ -106,9 +106,9 @@ def get_nftables_state_details(family):
         # no state policy for bridge
         return {}
 
-    command = f'nft list chain {suffix} dozenos_filter DOZENOS_STATE_{name_suffix}'
+    command = ['nft', 'list', 'chain', suffix, 'dozenos_filter', f'DOZENOS_STATE_{name_suffix}']
     try:
-        results = cmd(command)
+        results = cmdl(command)
     except:
         return {}
 
@@ -130,7 +130,7 @@ def get_nftables_group_members(family, table, name):
     out = []
 
     try:
-        results_str = cmd(f'nft -j list set {prefix} {table} {name}')
+        results_str = cmdl(['nft', '-j', 'list', 'set', prefix, table, name])
         results = json.loads(results_str)
     except:
         return out
@@ -158,7 +158,7 @@ def get_nftables_remote_group_members(family, table, name):
     out = []
 
     try:
-        results_str = cmd(f'nft -j list set {prefix} {table} {name}')
+        results_str = cmdl(['nft', '-j', 'list', 'set', prefix, table, name])
         results = json.loads(results_str)
     except:
         return out

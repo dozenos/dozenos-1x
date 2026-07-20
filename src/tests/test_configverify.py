@@ -15,7 +15,7 @@
 
 from unittest import TestCase
 from dozenos.configverify import verify_diffie_hellman_length
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 dh_file = '/tmp/dh.pem'
 
@@ -28,5 +28,5 @@ class TestDictSearch(TestCase):
 
     def test_dh_key_512(self):
         key_len = '512'
-        cmd(f'openssl dhparam -out {dh_file} {key_len}')
+        cmdl(['openssl', 'dhparam', '-out', dh_file, key_len])
         self.assertTrue(verify_diffie_hellman_length(dh_file, key_len))

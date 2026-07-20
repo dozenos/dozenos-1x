@@ -23,7 +23,7 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 from collections import OrderedDict
 
 from dozenos.configsession import ConfigSessionError
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.template import range_to_regex
 from configparser import ConfigParser
 from configparser import RawConfigParser
@@ -108,7 +108,7 @@ class TestServiceIPoEServer(BasicAccelPPPTest.TestCase):
         self.verify(conf)
 
         # check local users
-        tmp = cmd(f"sudo cat {self._chap_secrets}")
+        tmp = cmdl(['cat', self._chap_secrets], sudo=True)
         regex = f"{interface}\s+\*\s+{mac_address}\s+\*"
         tmp = re.findall(regex, tmp)
         self.assertTrue(tmp)
@@ -293,7 +293,7 @@ delegate={delegate_2_prefix},{delegate_mask},name={pool_name}"""
         self.verify(conf)
 
         # check local users
-        tmp = cmd(f'sudo cat {self._chap_secrets}')
+        tmp = cmdl(['cat', self._chap_secrets], sudo=True)
         regex = f'{interface}\s+\*\s+{mac_address}\s+{ip_address}'
         tmp = re.findall(regex, tmp)
         self.assertTrue(tmp)

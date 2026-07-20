@@ -29,7 +29,7 @@ from base_dozenostest_shim import ignore_warning
 from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
 from dozenos.utils.process import call
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 from dozenos.pki import CERT_BEGIN
 from dozenos.pki import encode_certificate
@@ -249,7 +249,7 @@ class TestHTTPSService(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify nginx is running inside the VRF
-        tmp = cmd(f'ip vrf pids {vrf}')
+        tmp = cmdl(['ip', 'vrf', 'pids', vrf])
         self.assertIn(PROCESS_NAME, tmp)
 
         self.cli_delete(['interfaces', 'dummy', interface])

@@ -27,7 +27,7 @@ from queue import Queue
 from logging.handlers import SysLogHandler
 
 from dozenos.configquery import ConfigTreeQuery
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.dict import dict_search
 from dozenos.utils.commit import commit_in_progress
 
@@ -40,7 +40,7 @@ logger.addHandler(logs_handler_syslog)
 logger.setLevel(logging.DEBUG)
 
 mdns_running_file = '/run/mdns_vrrp_active'
-mdns_update_command = 'sudo /usr/libexec/dozenos/conf_mode/service_mdns_repeater.py'
+mdns_update_command = '/usr/libexec/dozenos/conf_mode/service_mdns_repeater.py'
 
 # class for all operations
 class KeepalivedFifo:
@@ -93,7 +93,7 @@ class KeepalivedFifo:
     def _run_command(self, command):
         logger.debug(f'Running the command: {command}')
         try:
-            cmd(command)
+            cmdl(command.split())
         except OSError as err:
             logger.error(f'Unable to execute command "{command}": {err}')
 
@@ -128,7 +128,7 @@ class KeepalivedFifo:
                         # check and run commands for VRRP instances
                         if n_type == 'INSTANCE':
                             if os.path.exists(mdns_running_file):
-                                cmd(mdns_update_command)
+                                cmdl(mdns_update_command.split(), sudo=True)
 
                             tmp = dict_search(f'group.{n_name}.transition_script.{n_state.lower()}', self.vrrp_config_dict)
                             if tmp != None:
@@ -136,7 +136,7 @@ class KeepalivedFifo:
                         # check and run commands for VRRP sync groups
                         elif n_type == 'GROUP':
                             if os.path.exists(mdns_running_file):
-                                cmd(mdns_update_command)
+                                cmdl(mdns_update_command.split(), sudo=True)
 
                             tmp = dict_search(f'sync_group.{n_name}.transition_script.{n_state.lower()}', self.vrrp_config_dict)
                             if tmp != None:

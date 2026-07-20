@@ -26,7 +26,7 @@ from dozenos.template import render
 from dozenos.utils.dict import dict_search
 from dozenos.utils.kernel import check_kmod
 from dozenos.utils.network import interface_exists
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import run
 from dozenos.template import is_ipv6
 from dozenos import ConfigError
@@ -143,7 +143,7 @@ def generate(nat):
 def apply(nat):
     check_kmod(k_mod)
 
-    cmd(f'nft --file {nftables_nat66_config}')
+    cmdl(['nft', '--file', nftables_nat66_config])
 
     if not nat or 'deleted' in nat:
         os.unlink(nftables_nat66_config)

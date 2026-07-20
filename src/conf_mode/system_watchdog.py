@@ -23,7 +23,7 @@ from dozenos.config import Config
 from dozenos.base import Warning
 from dozenos.template import render
 from dozenos.utils.kernel import load_module
-from dozenos.utils.process import call, cmd
+from dozenos.utils.process import call, cmdl
 from dozenos import ConfigError
 from dozenos import airbag
 
@@ -90,7 +90,7 @@ def _verify_watchdog_module(module: str) -> None:
 
     # Ensure the module looks like a watchdog driver and not an arbitrary module.
     # Use modinfo filename location as the heuristic.
-    filename = cmd(['modinfo', '-F', 'filename', module], raising=ConfigError)
+    filename = cmdl(['modinfo', '-F', 'filename', module], raising=ConfigError)
     filename_l = filename.strip().lower()
 
     # Accept modules located under drivers/watchdog, plus explicit exception for

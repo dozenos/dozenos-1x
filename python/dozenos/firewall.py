@@ -22,7 +22,7 @@ from socket import getaddrinfo
 from dozenos.template import is_ipv4
 from dozenos.utils.dict import dict_search_args
 from dozenos.utils.dict import dict_search_recursive
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.network import get_vrf_tableid
 from dozenos.defaults import rt_global_table
 from dozenos.defaults import rt_global_vrf
@@ -85,7 +85,7 @@ def fqdn_resolve(fqdn, ipv6=False):
 
 def find_nftables_rule(table, chain, rule_matches=[]):
     # Find rule in table/chain that matches all criteria and return the handle
-    results = cmd(f'sudo nft --handle list chain {table} {chain}').split("\n")
+    results = cmdl(['nft', '--handle', 'list', 'chain', table, chain], sudo=True).split("\n")
     for line in results:
         if all(rule_match in line for rule_match in rule_matches):
             handle_search = re.search('handle (\d+)', line)
@@ -94,7 +94,7 @@ def find_nftables_rule(table, chain, rule_matches=[]):
     return None
 
 def remove_nftables_rule(table, chain, handle):
-    cmd(f'sudo nft delete rule {table} {chain} handle {handle}')
+    cmdl(['nft', 'delete', 'rule', table, chain, 'handle', str(handle)], sudo=True)
 
 # Functions below used by template generation
 

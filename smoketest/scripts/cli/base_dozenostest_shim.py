@@ -28,7 +28,7 @@ from dozenos.configsession import ConfigSession
 from dozenos.configsession import ConfigSessionError
 from dozenos.defaults import commit_lock
 from dozenos.frrender import mgmt_daemon
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 from dozenos.utils.process import run
 
@@ -125,10 +125,15 @@ class DozenOSUnitTestSHIM:
             """
             if self.debug:
                 print('commit')
-            path = ' '.join(path)
-            out = cmd(f'/opt/vyatta/bin/vyatta-op-cmd-wrapper {path}')
+            # some callers pass a single CLI phrase as one multi-word string
+            # (e.g. ['generate tech-support archive']) - split every element
+            # on whitespace so each CLI word becomes its own argument
+            args = []
+            for p in path:
+                args += str(p).split()
+            out = cmdl(['/opt/vyatta/bin/vyatta-op-cmd-wrapper'] + args)
             if self.debug:
-                print(f'\n\ncommand "{path}" returned:\n')
+                print(f'\n\ncommand "{" ".join(path)}" returned:\n')
                 pprint.pprint(out)
             return out
 
@@ -188,7 +193,7 @@ class DozenOSUnitTestSHIM:
         def getFRRopmode(self, command : str, json : bool=False):
             from json import loads
             if json: command += f' json'
-            out = cmd(f'vtysh -c "{command}"')
+            out = cmdl(['vtysh', '-c', command])
             if json:
                 out = loads(out)
             if self.debug:
@@ -270,7 +275,7 @@ class DozenOSUnitTestSHIM:
             Raises:
                 AssertionError: If expectations are not met.
             """
-            nftables_output = cmd(f'sudo nft {args} list table {table}')
+            nftables_output = cmdl(['nft'] + args.split() + ['list', 'table'] + table.split(), sudo=True)
 
             for search in nftables_search:
                 matched = False
@@ -343,7 +348,7 @@ class DozenOSUnitTestSHIM:
             Raises:
                 AssertionError: If expectations are not met.
             """
-            nftables_output = cmd(f'sudo nft {args} list chain {table} {chain}')
+            nftables_output = cmdl(['nft'] + args.split() + ['list', 'chain'] + table.split() + [chain], sudo=True)
 
             for search in nftables_search:
                 matched = False
@@ -401,7 +406,7 @@ class DozenOSUnitTestSHIM:
                 AssertionError: If expectations are not met.
             """
             try:
-                cmd(f'sudo nft list chain {table} {chain}')
+                cmdl(['nft', 'list', 'chain'] + table.split() + [chain], sudo=True)
                 if inverse:
                     self.fail(f'Chain exists: {table} {chain}')
             except OSError:
@@ -410,7 +415,7 @@ class DozenOSUnitTestSHIM:
 
         # Verify ip rule output
         def verify_rules(self, rules_search, inverse=False, addr_family='inet'):
-            rule_output = cmd(f'ip -family {addr_family} rule show')
+            rule_output = cmdl(['ip', '-family', addr_family, 'rule', 'show'])
 
             for search in rules_search:
                 matched = False

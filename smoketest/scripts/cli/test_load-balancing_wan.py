@@ -24,7 +24,7 @@ from dozenos.utils.file import chmod_755
 from dozenos.utils.file import write_file
 from dozenos.utils.misc import wait_for
 from dozenos.utils.process import call
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import rc_cmd
 
 base_path = ['load-balancing']
@@ -132,14 +132,14 @@ class TestLoadBalancingWan(DozenOSUnitTestSHIM.TestCase):
         # Check default routes in tables 201, 202
         # Expected values
         original = 'default via 203.0.113.1 dev eth201'
-        tmp = cmd('sudo ip route show table 201')
+        tmp = cmdl(['ip', 'route', 'show', 'table', '201'], sudo=True)
         self.assertEqual(tmp, original)
 
         original = 'default via 192.0.2.1 dev eth202'
-        tmp = cmd('sudo ip route show table 202')
+        tmp = cmdl(['ip', 'route', 'show', 'table', '202'], sudo=True)
         self.assertEqual(tmp, original)
 
-        tmp = cmd('sudo ip rule show')
+        tmp = cmdl(['ip', 'rule', 'show'], sudo=True)
         self.assertIn('from all fwmark 0xc9 lookup 201', tmp)
         self.assertIn('from all fwmark 0xca lookup 202', tmp)
         self.assertNotIn('fwmark 0xc9 lookup main suppress_prefixlength 0', tmp)
@@ -150,7 +150,7 @@ class TestLoadBalancingWan(DozenOSUnitTestSHIM.TestCase):
 
         time.sleep(5)
 
-        tmp = cmd('sudo ip rule show')
+        tmp = cmdl(['ip', 'rule', 'show'], sudo=True)
         self.assertIn('from all fwmark 0xc9 lookup main suppress_prefixlength 0', tmp)
         self.assertIn('from all fwmark 0xc9 lookup 201', tmp)
         self.assertIn('from all fwmark 0xca lookup main suppress_prefixlength 0', tmp)
@@ -244,17 +244,17 @@ class TestLoadBalancingWan(DozenOSUnitTestSHIM.TestCase):
         time.sleep(5)
 
         # Check mangle chains
-        tmp = cmd(f'sudo nft -s list chain ip dozenos_wanloadbalance wlb_mangle_isp_{iface1}')
+        tmp = cmdl(['nft', '-s', 'list', 'chain', 'ip', 'dozenos_wanloadbalance', f'wlb_mangle_isp_{iface1}'], sudo=True)
         self.assertEqual(tmp, mangle_isp1)
 
-        tmp = cmd(f'sudo nft -s list chain ip dozenos_wanloadbalance wlb_mangle_isp_{iface2}')
+        tmp = cmdl(['nft', '-s', 'list', 'chain', 'ip', 'dozenos_wanloadbalance', f'wlb_mangle_isp_{iface2}'], sudo=True)
         self.assertEqual(tmp, mangle_isp2)
 
-        tmp = cmd('sudo nft -s list chain ip dozenos_wanloadbalance wlb_mangle_prerouting')
+        tmp = cmdl(['nft', '-s', 'list', 'chain', 'ip', 'dozenos_wanloadbalance', 'wlb_mangle_prerouting'], sudo=True)
         self.assertEqual(tmp, mangle_prerouting)
 
         # Check nat chains
-        tmp = cmd('sudo nft -s list chain ip dozenos_wanloadbalance wlb_nat_postrouting')
+        tmp = cmdl(['nft', '-s', 'list', 'chain', 'ip', 'dozenos_wanloadbalance', 'wlb_nat_postrouting'], sudo=True)
         self.assertEqual(tmp, nat_wanloadbalance)
 
         # Set limit configuration
@@ -275,7 +275,7 @@ class TestLoadBalancingWan(DozenOSUnitTestSHIM.TestCase):
         time.sleep(5)
 
         # Check prerouting mangle chain
-        tmp = cmd('sudo nft -s list chain ip dozenos_wanloadbalance wlb_mangle_prerouting')
+        tmp = cmdl(['nft', '-s', 'list', 'chain', 'ip', 'dozenos_wanloadbalance', 'wlb_mangle_prerouting'], sudo=True)
         self.assertEqual(tmp, mangle_prerouting_limit)
 
         # Delete veth interfaces and netns

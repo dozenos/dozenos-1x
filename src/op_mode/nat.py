@@ -26,7 +26,7 @@ from tabulate import tabulate
 import dozenos.opmode
 
 from dozenos.configquery import ConfigTreeQuery
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.dict import dict_search
 
 ArgDirection = typing.Literal['source', 'destination']
@@ -44,7 +44,7 @@ def _get_xml_translation(direction, family, address=None):
     tmp = f'conntrack --dump --family {family} {opt} --output xml'
     if address:
         tmp += f' --src {address}'
-    return cmd(tmp)
+    return cmdl(tmp.split())
 
 
 def _xml_to_dict(xml):
@@ -68,7 +68,7 @@ def _get_json_data(direction, family):
     if direction == 'destination':
         chain = 'PREROUTING'
     family = 'ip6' if family == 'inet6' else 'ip'
-    return cmd(f'nft --json list chain {family} dozenos_nat {chain}')
+    return cmdl(['nft', '--json', 'list', 'chain', family, 'dozenos_nat', chain])
 
 
 def _get_raw_data_rules(direction, family):

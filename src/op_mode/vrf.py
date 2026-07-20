@@ -22,7 +22,7 @@ import typing
 
 from tabulate import tabulate
 from dozenos.utils.network import get_vrf_members
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 import dozenos.opmode
 
@@ -32,14 +32,14 @@ def _get_raw_data(name=None):
     If vrf name is set - get only this name data
     If vrf name set and not found - return []
     """
-    output = cmd('ip --json --brief link show type vrf')
+    output = cmdl(['ip', '--json', '--brief', 'link', 'show', 'type', 'vrf'])
     data = json.loads(output)
     if not data:
         return []
     if name:
         is_vrf_exists = True if [vrf for vrf in data if vrf.get('ifname') == name] else False
         if is_vrf_exists:
-            output = cmd(f'ip --json --brief link show dev {name}')
+            output = cmdl(['ip', '--json', '--brief', 'link', 'show', 'dev', name])
             data = json.loads(output)
             return data
         return []

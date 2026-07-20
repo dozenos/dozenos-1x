@@ -21,7 +21,7 @@ from sys import exit
 
 from dozenos.config import Config
 from dozenos.template import render
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos import ConfigError
 from dozenos import airbag
 airbag.enable()
@@ -60,7 +60,7 @@ def apply(sysctl):
 
     # We silently ignore all errors
     # See: https://bugzilla.redhat.com/show_bug.cgi?id=1264080
-    cmd(f'sysctl -f {config_file}')
+    cmdl(['sysctl', '-f', config_file])
     return None
 
 if __name__ == '__main__':

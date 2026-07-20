@@ -15,13 +15,14 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shlex
 
 from inspect import signature
 from inspect import _empty
 
 from dozenos.ifconfig.section import Section
 from dozenos.utils.process import popen
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
 from dozenos import debug
@@ -51,23 +52,7 @@ class Control(Section):
     def _popen(self, command):
         return popen(command, self.debug)
 
-    def _cmd(self, command, env=None):
-        import re
-        if 'netns' in self.config:
-            # This command must be executed from default netns 'ip link set dev X netns X'
-            # exclude set netns cmd from netns to avoid:
-            # failed to run command: ip netns exec ns01 ip link set dev veth20 netns ns01
-            pattern = r'ip link set dev (\S+) netns (\S+)'
-            matches = re.search(pattern, command)
-            if matches and matches.group(2) == self.config['netns']:
-                # Command already includes netns and matches desired namespace:
-                command = command
-            else:
-                command = f'ip netns exec {self.config["netns"]} {command}'
-        return cmd(command, self.debug, env=env)
-
     def _cmdl(self, command, env=None):
-        from dozenos.utils.process import cmdl
         if not isinstance(command, list):
             raise TypeError(f'_cmdl() requires a list, got {type(command).__name__}')
         netns = self.config.get('netns')
@@ -85,7 +70,7 @@ class Control(Section):
         Using the defined names, set data write to sysfs.
         """
         cmd = self._command_get[name]['shellcmd'].format(**config)
-        return self._command_get[name].get('format', lambda _: _)(self._cmd(cmd))
+        return self._command_get[name].get('format', lambda _: _)(self._cmdl(shlex.split(cmd)))
 
     def _values(self, name, validate, value):
         """
@@ -136,7 +121,7 @@ class Control(Section):
         config = {**config, **{'value': value}}
 
         cmd = self._command_set[name]['shellcmd'].format(**config)
-        return self._command_set[name].get('format', lambda _: _)(self._cmd(cmd))
+        return self._command_set[name].get('format', lambda _: _)(self._cmdl(shlex.split(cmd)))
 
     _sysfs_get = {}
     _sysfs_set = {}

@@ -19,7 +19,7 @@ import argparse
 
 from sys import exit
 from dozenos.configquery import ConfigTreeQuery
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", help="Get module model", action="store_true")
@@ -37,7 +37,7 @@ required.add_argument("--interface", help="WWAN interface name, e.g. wwan0", req
 
 def qmi_cmd(device, command, silent=False):
     try:
-        tmp = cmd(f'qmicli --device={device} --device-open-proxy {command}')
+        tmp = cmdl(['qmicli', f'--device={device}', '--device-open-proxy'] + command.split())
         tmp = tmp.replace(f'[{cdc}] ', '')
         if not silent:
             # skip first line as this only holds the info headline

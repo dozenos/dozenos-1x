@@ -21,7 +21,7 @@ import unittest
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 from dozenos.defaults import directories
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 base_path = ['show tech-support report']
 script_path = directories['op_mode'] + '/show_techsupport_report.py'
@@ -69,7 +69,7 @@ class TestTechSupportReport(DozenOSUnitTestSHIM.TestCase):
             'proc-and-sysctl-info',
         )
 
-        report = cmd([script_path, '--reports'] + list(blocks))
+        report = cmdl([script_path, '--reports'] + list(blocks))
 
         for block in blocks:
             self.assertSectionIn(block, report)
@@ -79,7 +79,7 @@ class TestTechSupportReport(DozenOSUnitTestSHIM.TestCase):
             self.assertSectionNotIn(block, report)
 
     def test_directory_output(self):
-        cmd([script_path, '--outdir', str(testdir)])
+        cmdl([script_path, '--outdir', str(testdir)])
 
         for block in all_blocks:
             file_path = testdir / block

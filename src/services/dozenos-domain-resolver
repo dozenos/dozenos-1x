@@ -32,7 +32,7 @@ from dozenos.utils.dict import dict_search_args
 from dozenos.utils.kernel import WIREGUARD_REKEY_AFTER_TIME
 from dozenos.utils.file import makedir, chmod_775, write_file, read_file
 from dozenos.utils.network import is_valid_ipv4_address_or_range, is_valid_ipv6_address_or_range
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import run
 from dozenos.xml_ref import get_defaults
 
@@ -118,7 +118,7 @@ def nft_output(table, set_name, ip_list):
 def nft_valid_sets():
     try:
         valid_sets = []
-        sets_json = cmd('nft --json list sets')
+        sets_json = cmdl(['nft', '--json', 'list', 'sets'])
         sets_obj = json.loads(sets_json)
 
         for obj in sets_obj['nftables']:

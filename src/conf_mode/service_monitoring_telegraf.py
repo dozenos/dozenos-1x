@@ -29,7 +29,7 @@ from dozenos.ifconfig import Section
 from dozenos.template import render
 from dozenos.utils.process import call
 from dozenos.utils.permission import chown
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos import ConfigError
 from dozenos import airbag
 airbag.enable()
@@ -43,7 +43,7 @@ systemd_override = '/run/systemd/system/telegraf.service.d/10-override.conf'
 def get_nft_filter_chains():
     """ Get nft chains for table filter """
     try:
-        nft = cmd('nft --json list table ip dozenos_filter')
+        nft = cmdl(['nft', '--json', 'list', 'table', 'ip', 'dozenos_filter'])
     except Exception:
         print('nft table ip dozenos_filter not found')
         return []

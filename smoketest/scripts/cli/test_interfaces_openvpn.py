@@ -25,7 +25,7 @@ from netifaces import interfaces # pylint: disable = no-name-in-module
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 from dozenos.utils.file import read_file
 from dozenos.template import address_from_cidr
@@ -242,7 +242,7 @@ class TestInterfacesOpenVPN(DozenOSUnitTestSHIM.TestCase):
             self.assertEqual(get_vrf(interface), vrf_name)
             self.assertIn(interface, interfaces())
 
-            pw = cmd(f'sudo cat {pw_file}')
+            pw = cmdl(['cat', pw_file], sudo=True)
             self.assertIn(f'{interface}user', pw)
             self.assertIn(f'{interface}secretpw', pw)
 

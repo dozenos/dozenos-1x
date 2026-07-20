@@ -26,7 +26,7 @@ from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_search_args
 from dozenos.utils.dict import dict_search_recursive
 from dozenos.utils.file import write_file
-from dozenos.utils.process import cmd, call
+from dozenos.utils.process import cmdl, call
 from dozenos.utils.process import rc_cmd
 from dozenos.template import render
 from dozenos import ConfigError
@@ -231,8 +231,7 @@ def apply(conntrack):
 
     # Add modules before nftables uses them
     if add_modules:
-        module_str = ' '.join(add_modules)
-        cmd(f'modprobe -a {module_str}')
+        cmdl(['modprobe', '-a'] + add_modules)
 
     # Load new nftables ruleset
     install_result, output = rc_cmd(f'nft --file {nftables_ct_file}')
@@ -241,8 +240,7 @@ def apply(conntrack):
 
     # Remove modules after nftables stops using them
     if rm_modules:
-        module_str = ' '.join(rm_modules)
-        cmd(f'rmmod {module_str}')
+        cmdl(['rmmod'] + rm_modules)
 
     try:
         call_dependents()
@@ -253,7 +251,7 @@ def apply(conntrack):
 
     # We silently ignore all errors
     # See: https://bugzilla.redhat.com/show_bug.cgi?id=1264080
-    cmd(f'sysctl -f {sysctl_file}')
+    cmdl(['sysctl', '-f', sysctl_file])
 
     if 'log' in conntrack:
         call(f'systemctl restart dozenos-conntrack-logger.service')

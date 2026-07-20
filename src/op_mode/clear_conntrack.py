@@ -18,11 +18,11 @@
 import sys
 
 from dozenos.utils.io import ask_yes_no
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import DEVNULL
 
 if not ask_yes_no("This will clear all currently tracked and expected connections. Continue?"):
     sys.exit(1)
 else:
-    cmd('/usr/sbin/conntrack -F', stderr=DEVNULL)
-    cmd('/usr/sbin/conntrack -F expect', stderr=DEVNULL)
+    cmdl(['/usr/sbin/conntrack', '-F'], stderr=DEVNULL)
+    cmdl(['/usr/sbin/conntrack', '-F', 'expect'], stderr=DEVNULL)

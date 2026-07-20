@@ -21,7 +21,7 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.kernel import unload_kmod
 
 class L2TPv3InterfaceTest(BasicInterfaceTest.TestCase):
@@ -45,8 +45,8 @@ class L2TPv3InterfaceTest(BasicInterfaceTest.TestCase):
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()
 
-        command = 'sudo ip -j l2tp show session'
-        json_out = json.loads(cmd(command))
+        command = ['ip', '-j', 'l2tp', 'show', 'session']
+        json_out = json.loads(cmdl(command, sudo=True))
         for interface in self._options:
             for config in json_out:
                 if config['interface'] == interface:

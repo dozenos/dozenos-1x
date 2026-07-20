@@ -20,7 +20,7 @@ import unittest
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 base_path = ['policy']
 
@@ -1618,7 +1618,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         50:	from 203.0.113.1 lookup 23
         50:	from 203.0.113.2 lookup 23
         """
-        tmp = cmd('ip rule show prio 50')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '50'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1638,7 +1638,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         original = """
         101:    from all fwmark 0x18 lookup 154
         """
-        tmp = cmd('ip rule show prio 101')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '101'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1658,7 +1658,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         original = """
         102:    from all to 203.0.113.1 lookup 154
         """
-        tmp = cmd('ip rule show prio 102')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '102'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1680,7 +1680,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         original = """
         85:	from all to 203.0.113.12 ipproto tcp lookup 104
         """
-        tmp = cmd('ip rule show prio 85')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '85'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1714,7 +1714,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         23:	from 203.0.113.1 to 203.0.113.5 fwmark 0x1e240 ipproto udp sport 5555 dport 8888 lookup 123
         23:	from 203.0.113.2 to 203.0.113.5 fwmark 0x1e240 ipproto udp sport 5555 dport 8888 lookup 123
         """
-        tmp = cmd(f'ip rule show prio {rule}')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', rule])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1730,7 +1730,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         23:	from 203.0.113.1 to 203.0.113.5 ipproto tcp dport 8888 lookup 111
         23:	from 203.0.113.2 to 203.0.113.5 ipproto tcp dport 8888 lookup 111
         """
-        tmp = cmd(f'ip rule show prio {rule}')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', rule])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1753,7 +1753,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         100:	from 203.0.113.11 fwmark 0x17 lookup 150
         100:	from 203.0.113.12 fwmark 0x17 lookup 150
         """
-        tmp = cmd('ip rule show prio 100')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '100'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1779,7 +1779,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         100:	from 203.0.113.11 iif lo lookup 150
         100:	from 203.0.113.12 iif lo lookup 150
         """
-        tmp = cmd('ip rule show prio 100')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '100'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1807,7 +1807,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         103:	from 203.0.113.12 to 203.0.113.13 fwmark 0x17 lookup 150
         103:	from 203.0.113.12 to 203.0.113.15 fwmark 0x17 lookup 150
         """
-        tmp = cmd('ip rule show prio 103')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '103'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1828,7 +1828,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         50:	from 2001:db8:123::/48 lookup 23
         50:	from 2001:db8:126::/48 lookup 23
         """
-        tmp = cmd('ip -6 rule show prio 50')
+        tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '50'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1848,7 +1848,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         original = """
         100:    from all fwmark 0x18 lookup 154
         """
-        tmp = cmd('ip -6 rule show prio 100')
+        tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '100'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1868,7 +1868,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         original = """
         101:    from all to 2001:db8:1337::/126 lookup 154
         """
-        tmp = cmd('ip -6 rule show prio 101')
+        tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '101'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1891,7 +1891,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         102:	from 2001:db8:1338::/126 fwmark 0x17 lookup 150
         102:	from 2001:db8:1339::/126 fwmark 0x17 lookup 150
         """
-        tmp = cmd('ip -6 rule show prio 102')
+        tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '102'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1916,7 +1916,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         102:	from 2001:db8:1338::/126 iif lo lookup 150
         102:	from 2001:db8:1339::/126 iif lo lookup 150
         """
-        tmp = cmd('ip -6 rule show prio 102')
+        tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '102'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1944,7 +1944,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         103:	from 2001:db8:1339::/56 to 2001:db8:13::/48 fwmark 0x17 lookup 150
         103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17 lookup 150
         """
-        tmp = cmd('ip -6 rule show prio 103')
+        tmp = cmdl(['ip', '-6', 'rule', 'show', 'prio', '103'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
 
@@ -1988,8 +1988,8 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         103:	from 2001:db8:1339::/56 to 2001:db8:16::/48 fwmark 0x17 lookup 150
         103:	from 2001:db8:1338::/126 to 2001:db8:13::/48 fwmark 0x17 lookup 150
         """
-        tmp = cmd('ip rule show prio 103')
-        tmp_v6 = cmd('ip -6 rule show prio 103')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '103'])
+        tmp_v6 = cmdl(['ip', '-6', 'rule', 'show', 'prio', '103'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original))
         self.assertEqual(sort_ip(tmp_v6), sort_ip(original_v6))
@@ -1998,8 +1998,8 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         self.cli_delete(path_v6)
         self.cli_commit()
 
-        tmp = cmd('ip rule show prio 103')
-        tmp_v6 = cmd('ip -6 rule show prio 103')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '103'])
+        tmp_v6 = cmdl(['ip', '-6', 'rule', 'show', 'prio', '103'])
 
         self.assertEqual(sort_ip(tmp), [])
         self.assertEqual(sort_ip(tmp_v6), [])
@@ -2022,7 +2022,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         105:	from 192.0.2.1 lookup 151
         105:	from 192.0.2.2 lookup 151
         """
-        tmp = cmd('ip rule show prio 105')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '105'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original_first))
 
@@ -2034,7 +2034,7 @@ class TestPolicy(DozenOSUnitTestSHIM.TestCase):
         105:	from 192.0.2.1 to 203.0.113.25 lookup 151
         105:	from 192.0.2.2 to 203.0.113.25 lookup 151
         """
-        tmp = cmd('ip rule show prio 105')
+        tmp = cmdl(['ip', 'rule', 'show', 'prio', '105'])
 
         self.assertEqual(sort_ip(tmp), sort_ip(original_second))
 

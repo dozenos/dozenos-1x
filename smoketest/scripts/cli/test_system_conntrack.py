@@ -25,7 +25,7 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 from dozenos.firewall import find_nftables_rule
 from dozenos.utils.file import read_file
 from dozenos.utils.file import read_json
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.system import sysctl_read
 from dozenos.xml_ref import default_value
 
@@ -44,7 +44,7 @@ def chain_priority_conntrack_compatible(table, chain, chain_type, hook):
     # Verify that base chain priority is a number greater than -200 (lower priority)
     # Priority must be lower than conntrack in order to read or update conntrack entries
 
-    chain_contents = cmd(f'sudo nft list chain {table} {chain}')
+    chain_contents = cmdl(['nft', 'list', 'chain'] + table.split() + [chain], sudo=True)
     chain_search = re.search(
         rf'type {chain_type} hook {hook} priority (-*\d+)\;',
         chain_contents,

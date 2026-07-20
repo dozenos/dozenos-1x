@@ -22,7 +22,7 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
 from dozenos.utils.file import read_file
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 from dozenos.xml_ref import default_value
 
@@ -100,7 +100,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
             # Check the generating config parameters
-            ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+            ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
             self.assertIn(f'usev4=ifv4', ddclient_conf)
             self.assertIn(f'ifv4={interface}', ddclient_conf)
             self.assertIn(f'password=\'{password}\'', ddclient_conf)
@@ -147,7 +147,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check the generating config parameters
-        ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+        ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
         self.assertIn(f'usev6=ifv6', ddclient_conf)
         self.assertIn(f'ifv6={interface}', ddclient_conf)
         self.assertIn(f'protocol={proto}', ddclient_conf)
@@ -187,7 +187,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
             # Check the generating config parameters
-            ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+            ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
             if details['protocol'] not in ['cloudflare', 'freedns']:
                 self.assertIn(f'usev4=ifv4', ddclient_conf)
                 self.assertIn(f'ifv4={interface}', ddclient_conf)
@@ -226,7 +226,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
             # Check some generating config parameters
-            ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+            ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
             self.assertIn(f'use=if', ddclient_conf)
             self.assertIn(f'if={interface}', ddclient_conf)
             self.assertIn(f'protocol={proto}', ddclient_conf)
@@ -253,7 +253,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
             self.cli_commit()
 
             # Check the generating config parameters
-            ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+            ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
             self.assertIn(f'protocol={proto}', ddclient_conf)
             self.assertIn(f'server={server}', ddclient_conf)
             self.assertIn(f'login={username}', ddclient_conf)
@@ -292,7 +292,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check the generating config parameters
-        ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+        ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
         self.assertIn(f'usev4=webv4', ddclient_conf)
         self.assertIn(f'webv4={web_url}', ddclient_conf)
         self.assertIn(f'webv4-skip=\'{web_skip}\'', ddclient_conf)
@@ -322,7 +322,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check the generating config parameters
-        ddclient_conf = cmd(f'sudo cat {DDCLIENT_CONF}')
+        ddclient_conf = cmdl(['cat', DDCLIENT_CONF], sudo=True)
         self.assertIn(f'ifv4={dyn_interface}', ddclient_conf)
         self.assertIn(f'protocol={proto}', ddclient_conf)
         self.assertIn(f'server={server}', ddclient_conf)
@@ -356,7 +356,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
                       f'--foreground --daemon {default_interval}', systemd_override)
 
         # Check for process in VRF
-        proc = cmd(f'ip vrf pids {vrf_name}')
+        proc = cmdl(['ip', 'vrf', 'pids', vrf_name])
         self.assertIn(DDCLIENT_PNAME, proc)
 
         # Cleanup VRF

@@ -23,7 +23,7 @@ import typing
 from tabulate import tabulate
 
 from dozenos.configquery import ConfigTreeQuery
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.dict import dict_search
 
 import dozenos.opmode
@@ -54,7 +54,7 @@ def _get_raw_data(interface=None, detail=False):
         tmp += f' details'
     if interface:
         tmp += f' ports {interface}'
-    output = cmd(tmp)
+    output = cmdl(tmp.split())
     data = json.loads(output)
     if not data:
         return []
@@ -152,7 +152,7 @@ def show_neighbors(raw: bool, interface: typing.Optional[str], detail: typing.Op
         tmp = 'lldpcli -f text show neighbors details'
         if interface:
             tmp += f' ports {interface}'
-        return cmd(tmp)
+        return cmdl(tmp.split())
 
 if __name__ == "__main__":
     try:

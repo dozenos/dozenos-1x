@@ -22,20 +22,20 @@ import typing
 import json
 
 import dozenos.opmode
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 def show_evpn(raw: bool, command: typing.Optional[str]):
     if raw:
         command = f"{command} json"
         evpnDict = {}
         try:
-            evpnDict['evpn'] = json.loads(cmd(f"vtysh -c '{command}'"))
+            evpnDict['evpn'] = json.loads(cmdl(['vtysh', '-c', command]))
         except:
             raise dozenos.opmode.DataUnavailable(f"\"{command.replace(' json', '')}\" is invalid or has no JSON option")
 
         return evpnDict
     else:
-        return cmd(f"vtysh -c '{command}'")
+        return cmdl(['vtysh', '-c', command])
 
 if __name__ == '__main__':
     try:

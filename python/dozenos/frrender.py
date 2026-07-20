@@ -37,7 +37,7 @@ from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_set_nested
 from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import rc_cmd
 from dozenos.template import get_dhcp_router
 from dozenos.template import render_to_string
@@ -881,4 +881,4 @@ class FRRender:
             raise ConfigError(emsg)
 
         # T3217: Save FRR configuration to /run/frr/config/frr.conf
-        return cmd('/usr/bin/vtysh -n --writeconfig')
+        return cmdl(['/usr/bin/vtysh', '-n', '--writeconfig'])

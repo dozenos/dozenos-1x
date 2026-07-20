@@ -22,7 +22,7 @@ import ipaddress
 
 from tabulate import tabulate
 from dozenos.utils.kernel import is_module_loaded
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.logger import syslog
 from dozenos.configquery import ConfigTreeQuery
 from dozenos import ipt_netflow
@@ -75,7 +75,7 @@ def _netflow_running():
 # get list of interfaces
 def _get_ifaces_dict():
     # run command to get ifaces list
-    out = cmd('/bin/ip link show')
+    out = cmdl(['/bin/ip', 'link', 'show'])
 
     # read output
     ifaces_out = out.splitlines()

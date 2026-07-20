@@ -33,7 +33,7 @@ from dozenos.utils.network import get_interface_config
 from dozenos.utils.network import get_vrf_tableid
 from dozenos.utils.network import is_intf_addr_assigned
 from dozenos.utils.network import interface_exists
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.system import sysctl_read
 from dozenos.template import inc_ip
 from dozenos.utils.process import process_named_running
@@ -109,7 +109,7 @@ class VRFTest(DozenOSUnitTestSHIM.TestCase):
             self.assertEqual(base_obj[key], value)
 
     def verify_kea_service_running(self, process_name):
-        tmp = cmd('tail -n 100 /var/log/messages')
+        tmp = cmdl(['tail', '-n', '100', '/var/log/messages'])
         self.assertTrue(
             process_named_running(process_name), msg=f'Service not running, log: {tmp}'
         )
@@ -685,7 +685,7 @@ class VRFTest(DozenOSUnitTestSHIM.TestCase):
                 self.verify_nftables_chain(rule, 'inet vrf_zones', chain, inverse=False)
 
             # T6603: there should be only ONE entry for the iifname/oifname in the chains
-            tmp = loads(cmd('sudo nft -j list table inet vrf_zones'))
+            tmp = loads(cmdl(['nft', '-j', 'list', 'table', 'inet', 'vrf_zones'], sudo=True))
             num_rules = len(search("nftables[].rule[].chain", tmp))
             # ['vrf_zones_ct_in', 'vrf_zones_ct_out']
             self.assertEqual(num_rules, 2)

@@ -21,7 +21,7 @@ from base_accel_ppp_test import BasicAccelPPPTest
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from configparser import ConfigParser
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.file import read_file
 
 swanctl_file = '/etc/swanctl/swanctl.conf'
@@ -74,7 +74,7 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
 
         self.cli_commit()
         # check ipsec apply to swanctl
-        self.assertEqual('', cmd('echo dozenos | sudo -S swanctl -L '))
+        self.assertEqual('', cmdl(['sudo', '-S', 'swanctl', '-L'], input='dozenos\n'))
 
         self.cli_set(base_path + ['authentication', 'local-users', 'username', 'foo', 'password', 'bar'])
         self.cli_set(base_path + ['authentication', 'mode', 'local'])
@@ -92,7 +92,7 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
         self.cli_commit()
 
         # check l2tp apply to swanctl
-        self.assertTrue('l2tp_remote_access:' in cmd('echo dozenos | sudo -S swanctl -L '))
+        self.assertTrue('l2tp_remote_access:' in cmdl(['sudo', '-S', 'swanctl', '-L'], input='dozenos\n'))
 
         swanctl_conf = read_file(swanctl_file)
         swanctl_lines = [
@@ -111,7 +111,7 @@ class TestVPNL2TPServer(BasicAccelPPPTest.TestCase):
         self.cli_commit()
 
         # check l2tp apply to swanctl after delete config
-        self.assertEqual('', cmd('echo dozenos | sudo -S swanctl -L '))
+        self.assertEqual('', cmdl(['sudo', '-S', 'swanctl', '-L'], input='dozenos\n'))
 
         # need to correct tearDown test
         self.basic_config()

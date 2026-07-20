@@ -27,7 +27,7 @@ from dozenos.defaults import config_status
 from dozenos.configsession import ConfigSession
 from dozenos.configsession import ConfigSessionError
 from dozenos.configtree import ConfigTree
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.file import write_file
 
 STATUS_FILE = config_status
@@ -104,8 +104,9 @@ def failsafe(config_file_name):
                                       'authentication',
                                       'encrypted-password'])
 
-    cmd(f"useradd --create-home --no-user-group --shell /bin/vbash --password '{passwd}' "\
-        "--groups frr,frrvty,vyattacfg,sudo,adm,dip,disk dozenos")
+    cmdl(['useradd', '--create-home', '--no-user-group', '--shell', '/bin/vbash',
+        '--password', passwd,
+        '--groups', 'frr,frrvty,vyattacfg,sudo,adm,dip,disk', 'dozenos'])
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

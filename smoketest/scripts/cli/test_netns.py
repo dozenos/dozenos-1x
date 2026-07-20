@@ -19,7 +19,7 @@ import unittest
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.network import is_netns_interface
 from dozenos.utils.network import get_netns_all
 
@@ -33,7 +33,7 @@ class NetNSTest(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # There should be no network namespace remaining
-        tmp = cmd('ip netns ls')
+        tmp = cmdl(['ip', 'netns', 'ls'])
         self.assertFalse(tmp)
 
         # always forward to base class
@@ -72,7 +72,7 @@ class NetNSTest(DozenOSUnitTestSHIM.TestCase):
         # commit changes
         self.cli_commit()
 
-        netns_iface_list = cmd(f'sudo ip netns exec {netns} ip link show')
+        netns_iface_list = cmdl(['ip', 'netns', 'exec', netns, 'ip', 'link', 'show'], sudo=True)
 
         for interface in interfaces:
             self.assertFalse(is_netns_interface(interface, netns))

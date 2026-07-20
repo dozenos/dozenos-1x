@@ -27,7 +27,7 @@ from dozenos.configdict import leaf_node_changed
 from dozenos.defaults import systemd_services
 from dozenos.ifconfig import Section
 from dozenos.template import is_ip
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import call
 from dozenos.utils.process import process_named_running
 from dozenos import ConfigError
@@ -171,7 +171,7 @@ def apply(config):
 
     # rsyslog runs into a race condition at boot time with systemd
     # restart rsyslog only if the hostname changed.
-    hostname_old = cmd('hostnamectl --static')
+    hostname_old = cmdl(['hostnamectl', '--static'])
     call(f'hostnamectl set-hostname --static {hostname_new}')
 
     # Restart services that use the hostname

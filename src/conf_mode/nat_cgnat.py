@@ -26,7 +26,7 @@ from logging.handlers import SysLogHandler
 from dozenos.config import Config
 from dozenos.configdict import is_node_changed
 from dozenos.template import render
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import run
 from dozenos import ConfigError
 from dozenos import airbag
@@ -417,11 +417,11 @@ def generate(config):
 def apply(config):
     if 'deleted' in config:
         # Cleanup cgnat
-        cmd('nft delete table ip cgnat')
+        cmdl(['nft', 'delete', 'table', 'ip', 'cgnat'])
         if os.path.isfile(nftables_cgnat_config):
             os.unlink(nftables_cgnat_config)
     else:
-        cmd(f'nft --file {nftables_cgnat_config}')
+        cmdl(['nft', '--file', nftables_cgnat_config])
 
     # Delete conntrack entries
     # if the pool configuration has changed

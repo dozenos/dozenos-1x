@@ -20,7 +20,7 @@ import re
 import tabulate
 
 from dozenos.config import Config
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 def get_config_policy(conf, name=None, ipv6=False):
     config_path = ['policy']
@@ -34,9 +34,9 @@ def get_config_policy(conf, name=None, ipv6=False):
 
 def get_nftables_details(name, ipv6=False):
     suffix = '6' if ipv6 else ''
-    command = f'sudo nft list chain ip{suffix} mangle DOZENOS_PBR{suffix}_{name}'
+    command = ['nft', 'list', 'chain', f'ip{suffix}', 'mangle', f'DOZENOS_PBR{suffix}_{name}']
     try:
-        results = cmd(command)
+        results = cmdl(command, sudo=True)
     except:
         return {}
 

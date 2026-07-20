@@ -148,9 +148,9 @@ def get_load_averages():
     return res
 
 def get_secure_boot_state() -> bool:
-    from dozenos.utils.process import cmd
+    from dozenos.utils.process import cmdl
     from dozenos.utils.boot import is_uefi_system
     if not is_uefi_system():
         return False
-    tmp = cmd('mokutil --sb-state', expect=[0, 255])
+    tmp = cmdl(['mokutil', '--sb-state'], expect=[0, 255])
     return bool('enabled' in tmp)

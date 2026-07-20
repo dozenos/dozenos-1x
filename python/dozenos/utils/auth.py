@@ -25,7 +25,7 @@ from enum import StrEnum
 from typing import List
 from typing import Optional
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 # Minimum UID used when adding system users
 MIN_USER_UID: int = 1000
@@ -119,8 +119,7 @@ def evaluate_strength(passwd: str) -> dict[str, str]:
 def make_password_hash(password):
     """ Makes a password hash for /etc/shadow using mkpasswd """
 
-    mkpassword = 'mkpasswd --method=yescrypt --stdin'
-    return cmd(mkpassword, input=password, timeout=5)
+    return cmdl(['mkpasswd', '--method=yescrypt', '--stdin'], input=password, timeout=5)
 
 def split_ssh_public_key(key_string, defaultname=""):
     """ Splits an SSH public key into its components """

@@ -24,7 +24,7 @@ from json import loads
 
 from dozenos.utils.network import interface_list
 from dozenos.utils.network import vrf_list
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import call
 
 import dozenos.opmode
@@ -200,7 +200,7 @@ def mtr(
             command = options[key]['mtr'].format(command=command, value=val)
 
     if json:
-        output = cmd(f'{command} {host}')
+        output = cmdl(command.split() + [host])
         if for_api:
             output = loads(output)
         print(output)

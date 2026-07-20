@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 
 def validate_hex_size(value):
@@ -43,4 +43,4 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    print(cmd(f'openssl rand -hex {args.hex_size}'))
+    print(cmdl(['openssl', 'rand', '-hex', str(args.hex_size)]))

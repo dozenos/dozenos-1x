@@ -18,7 +18,7 @@ import os
 import unittest
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 base_path = ['system', 'watchdog']
 
@@ -36,7 +36,7 @@ class TestSystemWatchdog(DozenOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['module', 'softdog'])
         self.cli_commit()
         # Check if softdog module is loaded
-        lsmod = cmd('lsmod')
+        lsmod = cmdl(['lsmod'])
         self.assertIn('softdog', lsmod)
         # Check /dev/watchdog0 exists
         self.assertTrue(

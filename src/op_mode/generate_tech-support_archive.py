@@ -27,7 +27,7 @@ from tarfile import open as tar_open
 
 from dozenos.defaults import directories
 from dozenos.utils.process import call
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.file import get_name_from_path
 from dozenos.remote import upload
 
@@ -61,7 +61,7 @@ def __save_show_report_files(reports_dir: Path):
         '--outdir',
         str(reports_dir),
     ]
-    output = cmd([script_path] + arguments)
+    output = cmdl([script_path] + arguments)
 
     if output.strip():
         print(output)
@@ -75,8 +75,8 @@ def __generate_archived_files(location_path: str) -> None:
     """
 
     # sync/flush journald before archiving /var/log/journal
-    cmd(['journalctl', '--sync'])
-    cmd(['journalctl', '--flush'])
+    cmdl(['journalctl', '--sync'])
+    cmdl(['journalctl', '--flush'])
 
     def __tar_filter(tarinfo):
         # path inside tar, because we set arcname=... below

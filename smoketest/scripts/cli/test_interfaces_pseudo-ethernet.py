@@ -21,7 +21,7 @@ import unittest
 from base_interfaces_test import BasicInterfaceTest
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 from dozenos.configsession import ConfigSessionError
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 from dozenos.ifconfig import Section
 
@@ -80,7 +80,7 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
                 self.cli_commit()
 
                 # Verify FDB entry exists with flag
-                fdb = cmd(f'bridge fdb show dev {br}')
+                fdb = cmdl(['bridge', 'fdb', 'show', 'dev', br])
                 self.assertIn(f'{mac_address} master {br} permanent', fdb)
                 self.assertIn(f'{mac_address} self permanent', fdb)
 
@@ -88,7 +88,7 @@ class PEthInterfaceTest(BasicInterfaceTest.TestCase):
                 self.cli_delete(self._base_path + [peth, 'anycast-gateway'])
                 self.cli_commit()
 
-                fdb = cmd(f'bridge fdb show dev {br}')
+                fdb = cmdl(['bridge', 'fdb', 'show', 'dev', br])
                 self.assertNotIn(f'{mac_address} master {br} permanent', fdb)
 
                 # Clean up temp bridge and peth

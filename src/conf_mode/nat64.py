@@ -33,7 +33,7 @@ from dozenos.utils.dict import dict_search
 from dozenos.utils.file import write_file
 from dozenos.utils.kernel import check_kmod
 from dozenos.utils.kernel import unload_kmod
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import run
 from dozenos.utils.system import sysctl_read
 
@@ -64,7 +64,7 @@ def verify(nat64) -> None:
     base_rule = base + ['source', 'rule']
 
     # Load in existing instances so we can destroy any unknown
-    lines = cmd('jool instance display --csv').splitlines()
+    lines = cmdl(['jool', 'instance', 'display', '--csv']).splitlines()
     for _, instance, _ in csv.reader(lines):
         match = INSTANCE_REGEX.fullmatch(instance)
         if not match:

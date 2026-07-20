@@ -28,7 +28,7 @@ from dozenos.utils.kernel import check_kmod
 from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_search_args
 from dozenos.utils.file import write_file
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import run
 from dozenos.utils.process import call
 from dozenos.utils.network import interface_exists
@@ -242,8 +242,8 @@ def generate(nat):
 def apply(nat):
     check_kmod(k_mod)
 
-    cmd(f'nft --file {nftables_nat_config}')
-    cmd(f'nft --file {nftables_static_nat_conf}')
+    cmdl(['nft', '--file', nftables_nat_config])
+    cmdl(['nft', '--file', nftables_static_nat_conf])
 
     if not nat or 'deleted' in nat:
         os.unlink(nftables_nat_config)

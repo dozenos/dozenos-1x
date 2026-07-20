@@ -20,7 +20,7 @@ import typing
 import xmltodict
 
 from tabulate import tabulate
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.network import get_vrf_tableid
 
 import dozenos.opmode
@@ -35,7 +35,7 @@ def _get_xml_data(family, orig_zone=None):
     if orig_zone is not None:
         args.extend(['--orig-zone', str(orig_zone)])
 
-    return cmd(['sudo', 'conntrack'] + args)
+    return cmdl(['conntrack'] + args, sudo=True)
 
 
 def _xml_to_dict(xml):
@@ -68,7 +68,7 @@ def _get_raw_data(family, orig_zone=None):
 
 def _get_raw_statistics():
     entries = []
-    data = cmd('sudo conntrack --stats')
+    data = cmdl(['conntrack', '--stats'], sudo=True)
     data = data.replace('  \t', '').split('\n')
     for entry in data:
         entries.append(entry.split())

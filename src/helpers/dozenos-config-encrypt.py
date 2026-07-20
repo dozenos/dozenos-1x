@@ -26,7 +26,7 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 from dozenos.system.image import is_live_boot, get_running_image
 from dozenos.tpm import clear_tpm_key, read_tpm_key, write_tpm_key
 from dozenos.utils.io import ask_input, ask_yes_no
-from dozenos.utils.process import cmd, run
+from dozenos.utils.process import cmdl, run
 from dozenos.defaults import directories
 
 persistpath_cmd = '/opt/vyatta/sbin/dozenos-persistpath'
@@ -43,7 +43,7 @@ def load_config(key):
     if not key:
         return
 
-    persist_path = cmd(persistpath_cmd).strip()
+    persist_path = cmdl([persistpath_cmd]).strip()
     image_name = get_running_image()
     image_path = os.path.join(persist_path, 'luks', image_name)
 
@@ -55,11 +55,11 @@ def load_config(key):
         f.write(key)
         key_file = f.name
 
-    cmd(f'cryptsetup -q open {image_path} dozenos_config --key-file={key_file}')
+    cmdl(['cryptsetup', '-q', 'open', image_path, 'dozenos_config', f'--key-file={key_file}'])
 
     run(f'umount -l {mount_path}')
-    cmd(f'mount /dev/mapper/dozenos_config {mount_path}')
-    cmd(f'chgrp -R vyattacfg {mount_path}')
+    cmdl(['mount', '/dev/mapper/dozenos_config', mount_path])
+    cmdl(['chgrp', '-R', 'vyattacfg', mount_path])
 
     os.unlink(key_file)
 
@@ -74,7 +74,7 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
             pass
         write_tpm_key(key)
 
-    persist_path = cmd(persistpath_cmd).strip()
+    persist_path = cmdl([persistpath_cmd]).strip()
     size = ask_input('Enter size of encrypted config partition (MB): ', numeric_only=True, default=512)
 
     luks_folder = os.path.join(persist_path, 'luks')
@@ -87,7 +87,7 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
 
     try:
         # Create file for encrypted config
-        cmd(f'fallocate -l {size}M {image_path}')
+        cmdl(['fallocate', '-l', f'{size}M', image_path])
 
         # Write TPM key for slot #1
         with NamedTemporaryFile(dir='/dev/shm', delete=False) as f:
@@ -95,7 +95,7 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
             key_file = f.name
 
         # Format and add main key to volume
-        cmd(f'cryptsetup -q luksFormat {image_path} {key_file}')
+        cmdl(['cryptsetup', '-q', 'luksFormat', image_path, key_file])
 
         if recovery_key:
             # Write recovery key for slot 2
@@ -103,11 +103,11 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
                 f.write(recovery_key)
                 recovery_key_file = f.name
 
-            cmd(f'cryptsetup -q luksAddKey {image_path} {recovery_key_file} --key-file={key_file}')
+            cmdl(['cryptsetup', '-q', 'luksAddKey', image_path, recovery_key_file, f'--key-file={key_file}'])
 
         # Open encrypted volume and format with ext4
-        cmd(f'cryptsetup -q open {image_path} dozenos_config --key-file={key_file}')
-        cmd('mkfs.ext4 /dev/mapper/dozenos_config')
+        cmdl(['cryptsetup', '-q', 'open', image_path, 'dozenos_config', f'--key-file={key_file}'])
+        cmdl(['mkfs.ext4', '/dev/mapper/dozenos_config'])
     except Exception as e:
         print('An error occurred while creating the encrypted config volume, aborting.')
 
@@ -120,14 +120,15 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
         raise e
 
     with TemporaryDirectory() as d:
-        cmd(f'mount /dev/mapper/dozenos_config {d}')
+        cmdl(['mount', '/dev/mapper/dozenos_config', d])
 
         # Move mount_path to encrypted volume
         shutil.copytree(
             mount_path, d, symlinks=True, copy_function=shutil.move, dirs_exist_ok=True
         )
-        cmd(f'chgrp -R vyattacfg {d}')
-        cmd(f'umount {d}')
+        shutil.copytree(mount_path, d, copy_function=shutil.move, dirs_exist_ok=True)
+        cmdl(['chgrp', '-R', 'vyattacfg', d])
+        cmdl(['umount', d])
 
     os.unlink(key_file)
 
@@ -135,8 +136,8 @@ def encrypt_config(key, recovery_key=None, is_tpm=True):
         os.unlink(recovery_key_file)
 
     run(f'umount -l {mount_path}')
-    cmd(f'mount /dev/mapper/dozenos_config {mount_path}')
-    cmd(f'chgrp vyattacfg {mount_path}')
+    cmdl(['mount', '/dev/mapper/dozenos_config', mount_path])
+    cmdl(['chgrp', 'vyattacfg', mount_path])
 
     return True
 
@@ -154,7 +155,7 @@ def test_decrypt(key):
     if not key:
         return
 
-    persist_path = cmd(persistpath_cmd).strip()
+    persist_path = cmdl([persistpath_cmd]).strip()
     image_name = get_running_image()
     image_path = os.path.join(persist_path, 'luks', image_name)
 
@@ -166,7 +167,7 @@ def test_decrypt(key):
             key_file = f.name
 
         try:
-            cmd(f'cryptsetup -q open {image_path} dozenos_config --key-file={key_file}')
+            cmdl(['cryptsetup', '-q', 'open', image_path, 'dozenos_config', f'--key-file={key_file}'])
             os.unlink(key_file)
             return True
         except:
@@ -177,7 +178,7 @@ def decrypt_config(key):
     if not key:
         return
 
-    persist_path = cmd(persistpath_cmd).strip()
+    persist_path = cmdl([persistpath_cmd]).strip()
     image_name = get_running_image()
     image_path = os.path.join(persist_path, 'luks', image_name)
     original_config_path = os.path.join(persist_path, 'boot', image_name, 'rw', 'opt', 'vyatta', 'etc', 'config')
@@ -189,7 +190,7 @@ def decrypt_config(key):
             f.write(key)
             key_file = f.name
 
-        cmd(f'cryptsetup -q open {image_path} dozenos_config --key-file={key_file}')
+        cmdl(['cryptsetup', '-q', 'open', image_path, 'dozenos_config', f'--key-file={key_file}'])
 
     # unmount encrypted volume mount points
     run(f'umount -Alq /dev/mapper/dozenos_config')
@@ -203,22 +204,21 @@ def decrypt_config(key):
     # Mount original persistence config path
     if not os.path.exists(mount_path):
         os.mkdir(mount_path)
-    cmd(f'mount --bind {original_config_path} {mount_path}')
+    cmdl(['mount', '--bind', original_config_path, mount_path])
 
     # Temporarily mount encrypted volume and migrate files to /config on rootfs
     with TemporaryDirectory() as d:
-        cmd(f'mount /dev/mapper/dozenos_config {d}')
+        cmdl(['mount', '/dev/mapper/dozenos_config', d])
 
         # Move encrypted volume to /opt/vyatta/etc/config
         shutil.copytree(
             d, mount_path, symlinks=True, copy_function=shutil.move, dirs_exist_ok=True
         )
-        cmd(f'chgrp -R vyattacfg {mount_path}')
-
-        cmd(f'umount {d}')
+        cmdl(['chgrp', '-R', 'vyattacfg', mount_path])
+        cmdl(['umount', d])
 
     # Close encrypted volume
-    cmd('cryptsetup -q close dozenos_config')
+    cmdl(['cryptsetup', '-q', 'close', 'dozenos_config'])
 
     # Remove encrypted volume image file and key
     if key_file:
@@ -249,7 +249,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.disable or args.load:
-        persist_path = cmd(persistpath_cmd).strip()
+        persist_path = cmdl([persistpath_cmd]).strip()
         image_name = get_running_image()
         image_path = os.path.join(persist_path, 'luks', image_name)
 

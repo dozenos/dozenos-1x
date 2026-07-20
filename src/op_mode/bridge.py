@@ -22,7 +22,7 @@ import typing
 
 from tabulate import tabulate
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import rc_cmd
 from dozenos.utils.process import call
 
@@ -33,7 +33,7 @@ def _get_json_data():
     """
     Get bridge data format JSON
     """
-    return cmd(f'bridge --json link show')
+    return cmdl(['bridge', '--json', 'link', 'show'])
 
 
 def _get_raw_data_summary():
@@ -52,7 +52,7 @@ def _get_raw_data_vlan(tunnel: bool = False):
     show = 'show'
     if tunnel:
         show = 'tunnel'
-    json_data = cmd(f'bridge --json --compressvlans vlan {show}')
+    json_data = cmdl(['bridge', '--json', '--compressvlans', 'vlan', show])
     data_dict = json.loads(json_data)
     return data_dict
 
@@ -87,7 +87,7 @@ def _get_raw_data_mdb(bridge):
     """Get MAC-address multicast group for the bridge brX
     :return list
     """
-    json_data = cmd(f'bridge --json  mdb show br {bridge}')
+    json_data = cmdl(['bridge', '--json', 'mdb', 'show', 'br', bridge])
     data_dict = json.loads(json_data)
     return data_dict
 
@@ -236,13 +236,13 @@ def _get_bridge_detail_nexthop_group(iface):
 
 
 def _get_bridge_detail_nexthop_group_raw(iface):
-    out = cmd(f'vtysh -c "show interface {iface} nexthop-group"')
+    out = cmdl(['vtysh', '-c', f'show interface {iface} nexthop-group'])
     return out
 
 
 def _get_bridge_detail_raw(iface):
     """Get interface detail json statistics"""
-    data = cmd(f'vtysh -c "show interface {iface} json"')
+    data = cmdl(['vtysh', '-c', f'show interface {iface} json'])
     data_dict = json.loads(data)
     return data_dict
 

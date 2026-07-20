@@ -19,9 +19,11 @@ import unittest
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
+import re
+
 from dozenos.configsession import ConfigSessionError
 from dozenos.ifconfig import Section
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 
 PROCESS_NAME = 'ndppd'
@@ -29,9 +31,20 @@ NDPPD_CONF = '/run/ndppd/ndppd.conf'
 base_path = ['service', 'ndp-proxy']
 
 def getConfigSection(string=None, end=' {', endsection='^}'):
-    tmp = f'cat {NDPPD_CONF} | sed -n "/^{string}{end}/,/{endsection}/p"'
-    out = cmd(tmp)
-    return out
+    # Equivalent of: cat NDPPD_CONF | sed -n "/^{string}{end}/,/{endsection}/p"
+    start_pattern = re.compile(r'^' + string + re.escape(end))
+    end_pattern = re.compile(endsection)
+    content = cmdl(['cat', NDPPD_CONF])
+    lines = []
+    in_section = False
+    for line in content.splitlines():
+        if not in_section and start_pattern.search(line):
+            in_section = True
+        if in_section:
+            lines.append(line)
+            if end_pattern.search(line):
+                break
+    return '\n'.join(lines)
 
 class TestServiceNDPProxy(DozenOSUnitTestSHIM.TestCase):
     @classmethod
@@ -123,7 +136,7 @@ class TestServiceNDPProxy(DozenOSUnitTestSHIM.TestCase):
 
         self.cli_commit()
 
-        config = cmd(f'cat {NDPPD_CONF}')
+        config = cmdl(['cat', NDPPD_CONF])
         self.assertNotIn(f'proxy {interface} {{', config)
 
 if __name__ == '__main__':

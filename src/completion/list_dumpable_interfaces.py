@@ -4,9 +4,9 @@
 
 import re
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 if __name__ == '__main__':
-    out = cmd('tcpdump -D').split('\n')
+    out = cmdl(['tcpdump', '-D']).split('\n')
     intfs = " ".join(map(lambda s: re.search(r'\d+\.(\S+)\s', s).group(1), out))
     print(intfs)

@@ -4,7 +4,7 @@ import json
 import re
 import time
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 
 def get_nft_filter_chains():
@@ -12,7 +12,7 @@ def get_nft_filter_chains():
     Get list of nft chains for table filter
     """
     try:
-        nft = cmd('/usr/sbin/nft --json list table ip dozenos_filter')
+        nft = cmdl(['/usr/sbin/nft', '--json', 'list', 'table', 'ip', 'dozenos_filter'])
     except Exception:
         return []
     nft = json.loads(nft)
@@ -30,9 +30,9 @@ def get_nftables_details(name):
     """
     Get dict, counters packets and bytes for chain
     """
-    command = f'/usr/sbin/nft list chain ip dozenos_filter {name}'
+    command = ['/usr/sbin/nft', 'list', 'chain', 'ip', 'dozenos_filter', name]
     try:
-        results = cmd(command)
+        results = cmdl(command)
     except:
         return {}
 

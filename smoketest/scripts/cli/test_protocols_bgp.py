@@ -25,7 +25,7 @@ from dozenos.ifconfig import Section
 from dozenos.configsession import ConfigSessionError
 from dozenos.template import is_ipv6
 from dozenos.utils.process import process_named_running
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.file import read_file
 from dozenos.frrender import bgp_daemon
 
@@ -1979,7 +1979,7 @@ class TestProtocolsBGP(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # restart bgpd to apply "-M bmp" and update PID
-        cmd(f'sudo kill -9 {self.daemon_pid}')
+        cmdl(['kill', '-9', str(self.daemon_pid)], sudo=True)
         # let the bgpd process recover
         sleep(10)
         # update daemon PID - this was a planned daemon restart

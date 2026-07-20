@@ -111,9 +111,9 @@ def get_available_cpus():
     """
     import json
 
-    from dozenos.utils.process import cmd
+    from dozenos.utils.process import cmdl
 
-    out = json.loads(cmd('lscpu --extended -b --json'))
+    out = json.loads(cmdl(['lscpu', '--extended', '-b', '--json']))
 
     return out['cpus']
 

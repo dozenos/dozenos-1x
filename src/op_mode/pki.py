@@ -51,7 +51,7 @@ from dozenos.pki import verify_certificate
 from dozenos.utils.io import ask_input
 from dozenos.utils.io import ask_yes_no
 from dozenos.utils.misc import install_into_config
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 CERT_REQ_END = '-----END CERTIFICATE REQUEST-----'
 auth_dir = '/config/auth'
@@ -235,11 +235,11 @@ def install_certificate(
     # Show/install conf commands for certificate
     prefix = 'ca' if is_ca else 'certificate'
 
-    base = f'pki {prefix} {name}'
+    base = ['pki', prefix, name]
     config_paths = []
     if cert:
         cert_pem = ''.join(encode_certificate(cert).strip().split('\n')[1:-1])
-        config_paths.append(f"{base} certificate '{cert_pem}'")
+        config_paths.append(base + ['certificate', cert_pem])
 
     if private_key:
         key_pem = ''.join(
@@ -247,9 +247,9 @@ def install_certificate(
             .strip()
             .split('\n')[1:-1]
         )
-        config_paths.append(f"{base} private key '{key_pem}'")
+        config_paths.append(base + ['private', 'key', key_pem])
         if key_passphrase:
-            config_paths.append(f'{base} private password-protected')
+            config_paths.append(base + ['private', 'password-protected'])
 
     install_into_config(conf, config_paths)
 
@@ -257,13 +257,13 @@ def install_certificate(
 def install_crl(ca_name, crl):
     # Show/install conf commands for crl
     crl_pem = ''.join(encode_certificate(crl).strip().split('\n')[1:-1])
-    install_into_config(conf, [f"pki ca {ca_name} crl '{crl_pem}'"])
+    install_into_config(conf, [['pki', 'ca', ca_name, 'crl', crl_pem]])
 
 
 def install_dh_parameters(name, params):
     # Show/install conf commands for dh params
     dh_pem = ''.join(encode_dh_parameters(params).strip().split('\n')[1:-1])
-    install_into_config(conf, [f"pki dh {name} parameters '{dh_pem}'"])
+    install_into_config(conf, [['pki', 'dh', name, 'parameters', dh_pem]])
 
 
 def install_ssh_key(name, public_key, private_key, passphrase=None):
@@ -274,10 +274,10 @@ def install_ssh_key(name, public_key, private_key, passphrase=None):
     username = os.getlogin()
     type_key_split = key_openssh.split(' ')
 
-    base = f'system login user {username} authentication public-keys {name}'
+    base = ['system', 'login', 'user', username, 'authentication', 'public-keys', name]
     install_into_config(
         conf,
-        [f"{base} key '{type_key_split[1]}'", f"{base} type '{type_key_split[0]}'"],
+        [base + ['key', type_key_split[1]], base + ['type', type_key_split[0]]],
     )
     print(
         encode_private_key(
@@ -302,7 +302,7 @@ def install_keypair(
         if install_public_key:
             install_public_pem = ''.join(public_key_pem.strip().split('\n')[1:-1])
             config_paths.append(
-                f"pki key-pair {name} public key '{install_public_pem}'"
+                ['pki', 'key-pair', name, 'public', 'key', install_public_pem]
             )
         else:
             print('Public key:')
@@ -317,10 +317,10 @@ def install_keypair(
         if install_private_key:
             install_private_pem = ''.join(private_key_pem.strip().split('\n')[1:-1])
             config_paths.append(
-                f"pki key-pair {name} private key '{install_private_pem}'"
+                ['pki', 'key-pair', name, 'private', 'key', install_private_pem]
             )
             if passphrase:
-                config_paths.append(f'pki key-pair {name} private password-protected')
+                config_paths.append(['pki', 'key-pair', name, 'private', 'password-protected'])
         else:
             print('Private key:')
             print(private_key_pem)
@@ -330,8 +330,8 @@ def install_keypair(
 
 def install_openvpn_key(name, key_data, key_version='1'):
     config_paths = [
-        f"pki openvpn shared-secret {name} key '{key_data}'",
-        f"pki openvpn shared-secret {name} version '{key_version}'",
+        ['pki', 'openvpn', 'shared-secret', name, 'key', key_data],
+        ['pki', 'openvpn', 'shared-secret', name, 'version', key_version],
     ]
     install_into_config(conf, config_paths)
 
@@ -346,7 +346,7 @@ def install_wireguard_key(interface, private_key, public_key):
 
     # Check if we are running in a config session - if yes, we can directly write to the CLI
     install_into_config(
-        conf, [f"interfaces wireguard {interface} private-key '{private_key}'"]
+        conf, [['interfaces', 'wireguard', interface, 'private-key', private_key]]
     )
 
     print(f"Corresponding public-key to use on peer system is: '{public_key}'")
@@ -361,7 +361,7 @@ def install_wireguard_psk(interface, peer, psk):
 
     # Check if we are running in a config session - if yes, we can directly write to the CLI
     install_into_config(
-        conf, [f"interfaces wireguard {interface} peer {peer} preshared-key '{psk}'"]
+        conf, [['interfaces', 'wireguard', interface, 'peer', peer, 'preshared-key', psk]]
     )
 
 
@@ -884,7 +884,10 @@ def generate_keypair(name, install=False, file=False):
 
 
 def generate_openvpn_key(name, install=False, file=False):
-    result = cmd('openvpn --genkey secret /dev/stdout | grep -o "^[^#]*"')
+    raw_result = cmdl(['openvpn', '--genkey', 'secret', '/dev/stdout'])
+    # equivalent to the old `grep -o "^[^#]*"`, applied per line: keep
+    # everything before the first '#' on each line (comment lines become empty)
+    result = '\n'.join(line.split('#', 1)[0] for line in raw_result.splitlines())
 
     if not result:
         print('Failed to generate OpenVPN key')
@@ -912,8 +915,8 @@ def generate_openvpn_key(name, install=False, file=False):
 
 
 def generate_wireguard_key(interface=None, install=False):
-    private_key = cmd('wg genkey')
-    public_key = cmd('wg pubkey', input=private_key)
+    private_key = cmdl(['wg', 'genkey'])
+    public_key = cmdl(['wg', 'pubkey'], input=private_key)
 
     if interface and install:
         install_wireguard_key(interface, private_key, public_key)
@@ -923,7 +926,7 @@ def generate_wireguard_key(interface=None, install=False):
 
 
 def generate_wireguard_psk(interface=None, peer=None, install=False):
-    psk = cmd('wg genpsk')
+    psk = cmdl(['wg', 'genpsk'])
     if interface and peer and install:
         install_wireguard_psk(interface, peer, psk)
     else:
@@ -1444,11 +1447,11 @@ def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
         # a bad time
         Warning(f'Directory "{certbot_config}" missing. Reinitializing PKI '
                 'subsystem...\n\n')
-        out = cmd(f'sudo sg vyattacfg -c "{dozenos_conf_scripts_dir}/pki.py"')
+        out = cmdl(['sg', 'vyattacfg', '-c', f'{dozenos_conf_scripts_dir}/pki.py'], sudo=True)
     elif force:
-        out = cmd(f'sudo sg vyattacfg -c "{dozenos_conf_scripts_dir}/pki.py certbot_renew_force"')
+        out = cmdl(['sg', 'vyattacfg', '-c', f'{dozenos_conf_scripts_dir}/pki.py certbot_renew_force'], sudo=True)
     else:
-        out = cmd(f'sudo sg vyattacfg -c "{dozenos_conf_scripts_dir}/pki.py certbot_renew"')
+        out = cmdl(['sg', 'vyattacfg', '-c', f'{dozenos_conf_scripts_dir}/pki.py certbot_renew'], sudo=True)
 
     print(out)
 

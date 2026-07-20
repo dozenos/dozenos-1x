@@ -26,7 +26,7 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 from dozenos.configsession import ConfigSessionError
 from dozenos.kea import kea_add_lease
 from dozenos.kea import kea_delete_lease
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 from dozenos.utils.file import read_file
 from dozenos.template import inc_ip
@@ -102,7 +102,9 @@ class TestServiceDHCPServer(DozenOSUnitTestSHIM.TestCase):
 
     def verify_service_running(self):
         try:
-            tmp = cmd('grep -i kea /var/log/messages | tail -n 100')
+            out = cmdl(['cat', '/var/log/messages'])
+            matched = [line for line in out.splitlines() if 'kea' in line.lower()]
+            tmp = '\n'.join(matched[-100:])
         except OSError:
             tmp = 'No relevant log entries'
         self.assertTrue(
@@ -1750,8 +1752,8 @@ class TestServiceDHCPServer(DozenOSUnitTestSHIM.TestCase):
             for seq in client_range:
                 ip_addr = inc_ip(subnet, seq)
                 kea_delete_lease(4, None, ip_addr)
-                cmd(
-                    f'{HOSTSD_CLIENT} --delete-hosts --tag dhcp-server-{ip_addr} --apply'
+                cmdl(
+                    [HOSTSD_CLIENT, '--delete-hosts', '--tag', f'dhcp-server-{ip_addr}', '--apply']
                 )
 
         self.addClassCleanup(internal_cleanup)
@@ -1804,7 +1806,7 @@ class TestServiceDHCPServer(DozenOSUnitTestSHIM.TestCase):
 
         # 2. Verify that leases are not available in dozenos-hostsd
         tag_regex = re.escape(f'dhcp-server-{subnet.rsplit(".", 1)[0]}')
-        host_json = cmd(f'{HOSTSD_CLIENT} --get-hosts {tag_regex}')
+        host_json = cmdl([HOSTSD_CLIENT, '--get-hosts', tag_regex])
         self.assertFalse(host_json.strip('{}'))
 
         # 3. Restart the service to trigger dozenos-hostsd sync and wait for it to start
@@ -1812,7 +1814,7 @@ class TestServiceDHCPServer(DozenOSUnitTestSHIM.TestCase):
 
         # 4. Verify that leases are synced and available in dozenos-hostsd
         tag_regex = re.escape(f'dhcp-server-{subnet.rsplit(".", 1)[0]}')
-        host_json = cmd(f'{HOSTSD_CLIENT} --get-hosts {tag_regex}')
+        host_json = cmdl([HOSTSD_CLIENT, '--get-hosts', tag_regex])
         self.assertTrue(host_json)
 
     def test_dhcp_log_level(self):

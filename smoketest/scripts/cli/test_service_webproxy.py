@@ -20,7 +20,7 @@ import unittest
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 from dozenos.utils.file import read_file
 
@@ -276,24 +276,24 @@ class TestServiceWebProxy(DozenOSUnitTestSHIM.TestCase):
         self.assertIn(f'redirect 302:http://block.dozenos.net', sg_config)
 
         # local-block database
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-default/domains')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-block-default/domains'], sudo=True)
         for block in local_block:
             self.assertIn(f'{block}', tmp)
 
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-url-default/urls')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-block-url-default/urls'], sudo=True)
         for url in local_block_url:
             self.assertIn(f'{url}', tmp)
 
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-block-keyword-default/expressions')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-block-keyword-default/expressions'], sudo=True)
         for pattern in local_block_pattern:
             self.assertIn(f'{pattern}', tmp)
 
         # local-ok database
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-ok-default/domains')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-ok-default/domains'], sudo=True)
         for ok in local_ok:
             self.assertIn(f'{ok}', tmp)
 
-        tmp = cmd(f'sudo cat {sg_db_dir}/local-ok-url-default/urls')
+        tmp = cmdl(['cat', f'{sg_db_dir}/local-ok-url-default/urls'], sudo=True)
         for url in local_ok_url:
             self.assertIn(f'{url}', tmp)
 

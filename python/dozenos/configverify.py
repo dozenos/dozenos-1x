@@ -430,7 +430,7 @@ def verify_diffie_hellman_length(file, min_keysize):
     then or equal to min_keysize """
     import os
     import re
-    from dozenos.utils.process import cmd
+    from dozenos.utils.process import cmdl
 
     try:
         keysize = str(min_keysize)
@@ -438,7 +438,7 @@ def verify_diffie_hellman_length(file, min_keysize):
         return False
 
     if os.path.exists(file):
-        out = cmd(f'openssl dhparam -inform PEM -in {file} -text')
+        out = cmdl(['openssl', 'dhparam', '-inform', 'PEM', '-in', file, '-text'])
         prog = re.compile('\d+\s+bit')
         if prog.search(out):
             bits = prog.search(out)[0].split()[0]

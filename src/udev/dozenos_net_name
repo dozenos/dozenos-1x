@@ -26,7 +26,7 @@ from sys import argv
 
 from dozenos.configtree import ConfigTree
 from dozenos.defaults import directories
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.boot import boot_configuration_complete
 from dozenos.utils.locking import Lock
 from dozenos.migrate import ConfigMigrate
@@ -88,7 +88,7 @@ def get_biosdevname(ifname: str) -> str:
     time.sleep(1)
 
     try:
-        biosname = cmd(f'/sbin/biosdevname --policy all_ethN -i {ifname}')
+        biosname = cmdl(['/sbin/biosdevname', '--policy', 'all_ethN', '-i', ifname])
     except Exception as e:
         logger.error(f'biosdevname error: {e}')
         biosname = ''

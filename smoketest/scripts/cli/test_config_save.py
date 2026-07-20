@@ -18,7 +18,7 @@
 import os
 import unittest
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.config import read_saved_value
 from dozenos.defaults import directories
 
@@ -28,8 +28,8 @@ class TestConfigDep(DozenOSUnitTestSHIM.TestCase):
     def test_disk_resident(self):
         config_file = os.path.join(directories['config'], 'config.boot')
 
-        evict_cmd = f'vmtouch -e {config_file}'
-        page_count_cmd = f'fincore -o PAGES -n {config_file}'
+        evict_cmd = ['vmtouch', '-e', config_file]
+        page_count_cmd = ['fincore', '-o', 'PAGES', '-n', config_file]
 
         test_value = 'test_disk_resident'
         test_path = ['interfaces', 'ethernet', 'eth3', 'description']
@@ -38,11 +38,11 @@ class TestConfigDep(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
         self.cli_save(config_file)
 
-        cmd(evict_cmd)
+        cmdl(evict_cmd)
         # pages may be paged back into memory by the time the above
         # completes (man vmtouch); either way, we read what is resident on
         # disk. The following is just for curiosity:
-        pages = cmd(page_count_cmd)
+        pages = cmdl(page_count_cmd)
 
         saved_value = read_saved_value(test_path)
 
@@ -61,25 +61,26 @@ class TestConfigDep(DozenOSUnitTestSHIM.TestCase):
 
         # save config will only call write_file_atomic if euid == 0:
         # below is the command as invoked by CLI 'save'
-        save_cmd = (
-            'sudo sg vyattacfg "umask 0002; /usr/libexec/dozenos/dozenos-save-config.py"'
-        )
+        save_cmd = [
+            'sg', 'vyattacfg',
+            'umask 0002; /usr/libexec/dozenos/dozenos-save-config.py',
+        ]
 
-        evict_cmd = f'vmtouch -e {config_file}'
-        page_count_cmd = f'fincore -o PAGES -n {config_file}'
+        evict_cmd = ['vmtouch', '-e', config_file]
+        page_count_cmd = ['fincore', '-o', 'PAGES', '-n', config_file]
 
         test_value = 'test_disk_resident'
         test_path = ['interfaces', 'ethernet', 'eth3', 'description']
 
         self.cli_set(test_path, value=test_value)
         self.cli_commit()
-        cmd(save_cmd)
+        cmdl(save_cmd, sudo=True)
 
-        cmd(evict_cmd)
+        cmdl(evict_cmd)
         # pages may be paged back into memory by the time the above
         # completes (man vmtouch); either way, we read what is resident on
         # disk. The following is just for curiosity:
-        pages = cmd(page_count_cmd)
+        pages = cmdl(page_count_cmd)
 
         saved_value = read_saved_value(test_path)
 
@@ -93,7 +94,7 @@ class TestConfigDep(DozenOSUnitTestSHIM.TestCase):
         # clean up remaining
         self.cli_delete(test_path)
         self.cli_commit()
-        cmd(save_cmd)
+        cmdl(save_cmd, sudo=True)
 
 
 if __name__ == '__main__':

@@ -34,7 +34,7 @@ from dozenos.configverify import verify_mtu_ipv6
 from dozenos.ifconfig import WWANIf
 from dozenos.utils.dict import dict_search
 from dozenos.utils.network import is_wwan_connected
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import call
 from dozenos.utils.process import DEVNULL
 from dozenos.utils.process import is_systemd_service_active
@@ -139,13 +139,13 @@ def apply(wwan):
     # required to serve all modems. Activate ModemManager on first invocation
     # of any WWAN interface.
     if not is_systemd_service_active(service_name):
-        cmd(f'systemctl start {service_name}')
+        cmdl(['systemctl', 'start', service_name])
 
         counter = 100
         # Wait until a modem is detected and then we can continue
         while counter > 0:
             counter -= 1
-            tmp = cmd('mmcli -L')
+            tmp = cmdl(['mmcli', '-L'])
             if tmp != 'No modems were found':
                 break
             sleep(0.250)
@@ -170,7 +170,7 @@ def apply(wwan):
         # We are the last WWAN interface - there are no other WWAN interfaces
         # remaining, thus we can stop ModemManager and free resources.
         if 'other_interfaces' not in wwan:
-            cmd(f'systemctl stop {service_name}')
+            cmdl(['systemctl', 'stop', service_name])
             # Clean CRON helper script which is used for to re-connect when
             # RF signal is lost
             if os.path.exists(cron_script):

@@ -19,7 +19,7 @@ import unittest
 from time import sleep
 
 from dozenos.utils.process import is_systemd_service_running
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.configsession import ConfigSessionError
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
@@ -34,7 +34,7 @@ class TestConfigDep(DozenOSUnitTestSHIM.TestCase):
         cls.running_state = is_systemd_service_running('dozenos-configd.service')
 
         if not cls.running_state:
-            cmd('sudo systemctl start dozenos-configd.service')
+            cmdl(['systemctl', 'start', 'dozenos-configd.service'], sudo=True)
             # allow time for init
             sleep(1)
 
@@ -46,7 +46,7 @@ class TestConfigDep(DozenOSUnitTestSHIM.TestCase):
 
         # return to running_state
         if not cls.running_state:
-            cmd('sudo systemctl stop dozenos-configd.service')
+            cmdl(['systemctl', 'stop', 'dozenos-configd.service'], sudo=True)
 
     def test_configdep_error(self):
         address_group = 'AG'

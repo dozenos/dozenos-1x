@@ -24,7 +24,7 @@ import dozenos.opmode
 
 from tabulate import tabulate
 from dozenos.configquery import ConfigTreeQuery
-from dozenos.utils.process import cmd, rc_cmd
+from dozenos.utils.process import cmdl, rc_cmd
 from dozenos.template import is_ipv4, is_ipv6
 
 _dynamic_cache_file = r'/run/ddclient/ddclient.cache'
@@ -117,10 +117,10 @@ def _get_dynamic_host_records_formatted(data):
     return output
 
 def _get_forwarding_statistics_raw() -> dict:
-    command = cmd('rec_control get-all')
+    command = cmdl(['rec_control', 'get-all'])
     data = _forwarding_data_to_dict(command)
     data['cache-size'] = "{0:.2f} kbytes".format( int(
-        cmd('rec_control get cache-bytes')) / 1024 )
+        cmdl(['rec_control', 'get', 'cache-bytes'])) / 1024 )
     return data
 
 def _get_forwarding_statistics_formatted(data):

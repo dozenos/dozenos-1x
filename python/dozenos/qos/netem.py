@@ -48,7 +48,7 @@ class NetEm(QoSBase):
             duplicate = config["duplicate"]
             tmp += f' duplicate {duplicate}%'
 
-        self._cmd(tmp)
+        self._cmdl(tmp.split())
 
         # call base class
         super().update(config, direction)

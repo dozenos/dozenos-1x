@@ -27,7 +27,7 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 from dozenos.configsession import ConfigSessionError
 from dozenos.ifconfig import Section
 from dozenos.template import ip_from_cidr
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.file import read_file
 from dozenos.utils.network import get_interface_config
 from dozenos.utils.network import interface_exists
@@ -272,7 +272,7 @@ class BridgeInterfaceTest(BasicInterfaceTest.TestCase):
         def _check_vlan_filter(interface, vifs) -> None:
             configured_vlan_ids = []
 
-            bridge_json = cmd(f'bridge -j vlan show dev {interface}')
+            bridge_json = cmdl(['bridge', '-j', 'vlan', 'show', 'dev', interface])
             bridge_json = json.loads(bridge_json)
             self.assertIsNotNone(bridge_json)
 

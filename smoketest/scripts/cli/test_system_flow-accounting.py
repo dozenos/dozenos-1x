@@ -23,7 +23,7 @@ from dozenos.configsession import ConfigSessionError
 from dozenos.ifconfig import Section
 from dozenos.utils.kernel import is_module_loaded
 from dozenos.utils.kernel import get_module_data
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 
 module_name = 'ipt_NETFLOW'
 base_path = ['system', 'flow-accounting']
@@ -33,7 +33,7 @@ class TestSystemFlowAccounting(DozenOSUnitTestSHIM.TestCase):
 
     def _get_iptables_watched_interfaces(self, command, table, chain, column_name):
         iptables_command = f'{command} -vn -t {table} -L {chain}'
-        data = cmd(iptables_command, message='Failed to get flows list')
+        data = cmdl(iptables_command.split(), message='Failed to get flows list')
         data = data.splitlines()
         self.assertGreaterEqual(
             len(data), 2, "Unexpected output of {command}, should be at least two lines"

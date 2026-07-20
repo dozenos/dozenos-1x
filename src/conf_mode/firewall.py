@@ -36,7 +36,7 @@ from dozenos.utils.dict import dict_search_args
 from dozenos.utils.dict import dict_search_recursive
 from dozenos.utils.file import write_file
 from dozenos.utils.process import call
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import rc_cmd
 from dozenos.utils.network import get_vrf_members
 from dozenos.utils.network import get_interface_vrf
@@ -734,7 +734,7 @@ def apply(firewall):
         raise ConfigError(f'Failed to apply firewall: {output}')
 
     # Apply firewall global-options sysctl settings
-    cmd(f'sysctl -f {sysctl_file}')
+    cmdl(['sysctl', '-f', sysctl_file])
 
     call_dependents()
 

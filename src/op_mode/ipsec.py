@@ -24,7 +24,7 @@ from tabulate import tabulate
 
 from dozenos.utils.convert import convert_data
 from dozenos.utils.convert import seconds_to_human
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.configquery import ConfigTreeQuery
 from dozenos.base import Warning
 
@@ -61,7 +61,7 @@ def _get_output_swanctl_sas_from_list(ra_output_list: list) -> str:
     output = ''
     for sa_val in ra_output_list:
         for sa in sa_val.values():
-            swanctl_output: str = cmd(f'sudo swanctl -l --ike-id {sa["uniqueid"]}')
+            swanctl_output: str = cmdl(['swanctl', '-l', '--ike-id', str(sa["uniqueid"])], sudo=True)
         output = f'{output}{swanctl_output}\n\n'
     return output
 

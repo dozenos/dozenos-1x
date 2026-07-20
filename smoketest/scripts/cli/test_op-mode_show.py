@@ -19,7 +19,7 @@ import unittest
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
-from dozenos.utils.process import cmd
+from dozenos.utils.process import cmdl
 from dozenos.version import get_version
 
 base_path = ['show']
@@ -35,7 +35,7 @@ class TestOPModeShow(DozenOSUnitTestSHIM.TestCase):
     def test_op_mode_show_version_kernel(self):
         # Retrieve output of "show version" OP-mode command
         tmp = self.op_mode(base_path + ['version', 'kernel'])
-        self.assertEqual(cmd('uname -r'), tmp)
+        self.assertEqual(cmdl(['uname', '-r']), tmp)
 
     def test_op_mode_show_vrf(self):
         # Retrieve output of "show version" OP-mode command
