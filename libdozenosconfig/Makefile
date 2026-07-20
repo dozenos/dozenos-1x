@@ -42,8 +42,8 @@ all: sharedlib
 PHONY: depends
 depends:
 	sudo sh -c 'eval $$(opam env --root=/opt/opam --set-root) ;\
-		opam pin add dozenos1x-config https://github.com/dozenos/dozenos1x-config.git#rolling -y ; \
-		opam pin add vyconf https://github.com/dozenos/vyconf.git#rolling -y'
+		opam pin add dozenos1x-config https://github.com/dozenos/dozenos1x-config.git#upstream-60b546f26d9fd43dbc6b6bfd1a7edc309c835760 -y ; \
+		opam pin add vyconf https://github.com/dozenos/vyconf.git#upstream-e25b13ae3040d02326f01bf9bedd097795fb3a62 -y'
 
 sharedlib: depends $(BUILDDIR)/libdozenosconfig$(EXTDLL)
 

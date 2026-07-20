@@ -14,7 +14,7 @@
 # mirror-push.sh call that produced this very mirror (minus the upstream
 # URL, which never appears in the mirror tree).
 #
-# Baked mirror-push.sh flags for this repo: --overlay dozenos-rebrand/overlay-dozenos-1x --allow-residuals
+# Baked mirror-push.sh flags for this repo: --overlay dozenos-rebrand/overlay-dozenos-1x --allow-residuals --ensure-pin-tags
 name: DozenOS self-sync
 
 on:
@@ -107,7 +107,7 @@ jobs:
           # Baked in at template-render time; may be empty for a plain
           # mirror -- intentionally unquoted on the invocation line so an
           # empty value contributes no argument at all.
-          MIRROR_PUSH_FLAGS="--overlay dozenos-rebrand/overlay-dozenos-1x --allow-residuals"
+          MIRROR_PUSH_FLAGS="--overlay dozenos-rebrand/overlay-dozenos-1x --allow-residuals --ensure-pin-tags"
           # shellcheck disable=SC2086
           dozenos-rebrand/mirror-push.sh "$UPSTREAM_URL" \
             --target "$REPO_NAME" \
