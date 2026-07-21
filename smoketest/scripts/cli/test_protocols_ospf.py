@@ -330,7 +330,7 @@ class TestProtocolsOSPF(DozenOSUnitTestSHIM.TestCase):
 
     def test_ospf_09_interface_configuration(self):
         interfaces = Section.interfaces('ethernet')
-        password = 'dozenos1234'
+        password = 'dzos1234'
         bandwidth = '10000'
         cost = '150'
         network = 'point-to-point'
@@ -621,7 +621,7 @@ class TestProtocolsOSPF(DozenOSUnitTestSHIM.TestCase):
     def test_ospf_19_authentication(self):
         md5_key = 'dozenosMD5'
         md5_id = '10'
-        plaintext_key = 'dozenos123'
+        plaintext_key = 'dzos123'
 
         self.cli_set(base_path + ['area', '0'])
         self.cli_set(base_path + ['interface', dummy_if, 'authentication', 'md5', 'key-id', md5_id, 'md5-key', md5_key])

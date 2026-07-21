@@ -49,7 +49,7 @@ class TestProtocolsNHRP(DozenOSUnitTestSHIM.TestCase):
         tunnel_encapsulation = "gre"
         esp_group = "ESP-HUB"
         ike_group = "IKE-HUB"
-        nhrp_secret = "dozenos123"
+        nhrp_secret = "dzos123"
         nhrp_profile = "NHRPVPN"
         nhrp_holdtime = '300'
         nhs_tunnelip = '172.16.253.1'

@@ -333,7 +333,7 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
     def test_08_dyndns_vrf(self):
         # Table number randomized, but should be within range 100-65535
         vrf_table = '58710'
-        vrf_name = f'dozenos-test-{vrf_table}'
+        vrf_name = f'dzos-test-{vrf_table}'
         svc_path = name_path + ['cloudflare']
         proto = 'cloudflare'
 
