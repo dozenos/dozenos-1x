@@ -1512,6 +1512,7 @@ class TestFirewall(DozenOSUnitTestSHIM.TestCase):
         # Setup base config for test
         self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'url', 'http://127.0.0.1:80/list.txt'])
         self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'description', 'Example Group 01'])
+        self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'interval', '4h'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'destination', 'group', 'remote-group', 'group01'])
@@ -1534,6 +1535,15 @@ class TestFirewall(DozenOSUnitTestSHIM.TestCase):
             self.cli_commit()
         self.cli_discard()
 
+        # Test remote-group interval must be between 60 seconds and 4 weeks
+        self.cli_set(
+            ['firewall', 'group', 'remote-group', 'group01', 'interval', '30s']
+        )
+
+        with self.assertRaises(ConfigSessionError):
+            self.cli_commit()
+        self.cli_discard()
+
         # Test remote-group cannot be set alongside address in rules
         self.cli_set(['firewall', 'ipv4', 'input', 'filter', 'rule', '10', 'destination', 'address', '127.0.0.1'])
 
@@ -1546,6 +1556,9 @@ class TestFirewall(DozenOSUnitTestSHIM.TestCase):
         # Setup base config for test
         self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'url', 'http://127.0.0.1:80/list.txt'])
         self.cli_set(['firewall', 'group', 'remote-group', 'group01', 'description', 'Example Group 01'])
+        self.cli_set(
+            ['firewall', 'group', 'remote-group', 'group01', 'interval', '120']
+        )
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'action', 'drop'])
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'protocol', 'tcp'])
         self.cli_set(['firewall', 'ipv6', 'input', 'filter', 'rule', '10', 'destination', 'group', 'remote-group', 'group01'])

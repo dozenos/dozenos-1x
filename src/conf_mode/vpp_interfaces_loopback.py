@@ -25,6 +25,8 @@ from dozenos.configdep import set_dependents, call_dependents
 from dozenos.utils.process import is_systemd_service_active
 
 from dozenos.ifconfig.vpp import VPPLoopbackInterface
+from dozenos.vpp.config_deps import deps_bridge_dict
+from dozenos.vpp.config_verify import verify_vpp_remove_bridge_interface
 
 
 def get_config(config=None) -> dict:
@@ -56,6 +58,12 @@ def get_config(config=None) -> dict:
         no_tag_node_value_mangle=True,
     )
 
+    # Bridge dependency - reattach as BVI after this loopback is recreated
+    config['bridge_members'] = deps_bridge_dict(conf)
+    if ifname in config['bridge_members']:
+        for bridge_iface in config['bridge_members'][ifname]:
+            set_dependents('vpp_interfaces_bridge', conf, bridge_iface)
+
     # NAT dependency
     if conf.exists(['vpp', 'nat', 'nat44']):
         set_dependents('vpp_nat_nat44', conf)
@@ -73,6 +81,8 @@ def verify(config):
     # No need to verify anything if vpp is removed
     if 'remove_vpp' in config:
         return None
+
+    verify_vpp_remove_bridge_interface(config)
 
     if not is_systemd_service_active('vpp.service'):
         raise ConfigError(
