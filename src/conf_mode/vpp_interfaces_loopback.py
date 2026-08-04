@@ -27,6 +27,7 @@ from dozenos.utils.process import is_systemd_service_active
 from dozenos.ifconfig.vpp import VPPLoopbackInterface
 from dozenos.vpp.config_deps import deps_bridge_dict
 from dozenos.vpp.config_verify import verify_vpp_remove_bridge_interface
+from dozenos.vpp.config_verify import verify_vpp_remove_interface
 
 
 def get_config(config=None) -> dict:
@@ -58,6 +59,14 @@ def get_config(config=None) -> dict:
         no_tag_node_value_mangle=True,
     )
 
+    # VPP config for member-in-feature checks
+    config['vpp'] = conf.get_config_dict(
+        ['vpp'],
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        no_tag_node_value_mangle=True,
+    )
+
     # Bridge dependency - reattach as BVI after this loopback is recreated
     config['bridge_members'] = deps_bridge_dict(conf)
     if ifname in config['bridge_members']:
@@ -84,10 +93,20 @@ def verify(config):
 
     verify_vpp_remove_bridge_interface(config)
 
+    if 'deleted' in config:
+        verify_vpp_remove_interface(config['ifname'], config['vpp'], match_vlans=True)
+        return None
+
     if not is_systemd_service_active('vpp.service'):
         raise ConfigError(
             'Cannot configure VPP loopback interface: vpp.service is not running'
         )
+
+    for vif_remove in config.get('vif_remove', []):
+        vif_iface = f'{config["ifname"]}.{vif_remove}'
+        verify_vpp_remove_interface(vif_iface, config['vpp'])
+
+    return None
 
 
 def generate(config):

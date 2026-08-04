@@ -63,6 +63,7 @@ from dozenos.vpp.config_verify import (
     verify_routes_count,
     verify_vpp_main_heap_size,
     verify_vpp_buffers,
+    verify_vpp_mac_change_supported,
 )
 from dozenos.vpp.config_resource_checks import memory
 from dozenos.vpp.config_filter import iface_filter_eth
@@ -395,6 +396,12 @@ def get_config(config=None):
                     EthtoolGDrvinfo(iface).driver
                 )
 
+                # Record whether a custom MAC is configured, so verify() can
+                # reject it up front on drivers that cannot apply it.
+                config['settings']['interface'][iface]['mac_configured'] = conf.exists(
+                    ['interfaces', 'ethernet', iface, 'mac']
+                )
+
                 # filter unsupported config nodes
                 iface_filter_eth(conf, iface)
                 set_dependents('ethernet', conf, iface)
@@ -582,6 +589,12 @@ def verify(config):
     for iface in config['settings']['interface'].keys():
         if iface not in ethernet_ifaces:
             raise ConfigError(f'Interface {iface} does not exist or is not Ethernet!')
+
+    # An interface added to VPP with a custom MAC its driver cannot apply would
+    # fail to come up in the dataplane - reject it here instead.
+    for iface, iface_config in config['settings']['interface'].items():
+        if iface_config.get('mac_configured'):
+            verify_vpp_mac_change_supported(iface)
 
     # Resource usage checks
     cpu_cores = int(config['settings']['resource_allocation']['cpu_cores'])

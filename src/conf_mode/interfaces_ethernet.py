@@ -51,6 +51,7 @@ from dozenos.utils.network import get_vrf_tableid
 from dozenos.utils.process import is_systemd_service_running
 from dozenos.vpp.config_deps import deps_bond_dict
 from dozenos.vpp.config_verify import verify_vpp_remove_interface
+from dozenos.vpp.config_verify import verify_vpp_mac_change_supported
 from dozenos.vpp.control_vpp import VPPControl
 from dozenos import ConfigError
 from dozenos import airbag
@@ -403,6 +404,11 @@ def verify(ethernet):
     verify_ring_buffer(ethernet, ethtool)
     verify_offload(ethernet, ethtool)
     verify_mac_change(ethernet, ethtool)
+    if (
+        'mac' in ethernet
+        and dict_search(f'vpp.settings.interface.{ifname}', ethernet) is not None
+    ):
+        verify_vpp_mac_change_supported(ifname)
     verify_coalesce(ethernet, ethtool)
 
     if 'is_bond_member' in ethernet:
