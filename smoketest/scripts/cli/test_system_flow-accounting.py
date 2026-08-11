@@ -219,7 +219,7 @@ class TestSystemFlowAccounting(DozenOSUnitTestSHIM.TestCase):
         # export socket is bound to a device - a per-server source-interface
         # takes precedence, otherwise the global VRF device is used - so that
         # collectors reachable only inside the VRF actually receive flows.
-        vrf_name = 'dozenos-test-mgmt'
+        vrf_name = 'dzos-test-mgmt'
         table = '1010'
         source_address = '192.0.2.1'
         dummy_if = 'dum2096'
