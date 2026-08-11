@@ -84,8 +84,14 @@ def apply(config_dict):
     sysctl_write(['net', 'ipv6', 'neigh', 'default', 'gc_thresh1'], size // 8)
 
     # configure IPv6 strict-dad
+    # T7736: DAD is off by default (see 32-dozenos-podman.conf) so that
+    # interfaces outside DozenOS's interface model (e.g. netavark's
+    # container bridges) skip it; DozenOS-managed interface types always
+    # write their own explicit accept_dad on their own next commit
+    # regardless of what this sets here, so this only has a lasting
+    # effect on interfaces nothing else manages.
     tmp = dict_search('strict_dad', opt)
-    value = '2' if (tmp != None) else '1'
+    value = '2' if (tmp != None) else '0'
     for root, dirs, files in os.walk('/proc/sys/net/ipv6/conf'):
         for name in files:
             if name == 'accept_dad':
