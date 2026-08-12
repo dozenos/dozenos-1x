@@ -1678,6 +1678,15 @@ class TestFirewall(DozenOSUnitTestSHIM.TestCase):
 
         self.verify_nftables(nftables_search, 'ip6 dozenos_filter')
 
+    def test_last_used(self):
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'action', 'accept'])
+        self.cli_set(['firewall', 'ipv4', 'forward', 'filter', 'rule', '1', 'last-used'])
+        self.cli_commit()
+
+        nftables_search = [
+            ['last used'],
+        ]
+        self.verify_nftables(nftables_search, 'ip dozenos_filter')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())
