@@ -36,7 +36,7 @@ class TestDozenOSUtilsNetwork(TestCase):
         self.assertFalse(dozenos.utils.network.is_ipv6_link_local('::1'))
         self.assertFalse(dozenos.utils.network.is_ipv6_link_local('::1%lo'))
 
-    def test_is_ipv6_link_local(self):
+    def test_is_loopback_addr(self):
         self.assertTrue(dozenos.utils.network.is_loopback_addr('127.0.0.1'))
         self.assertTrue(dozenos.utils.network.is_loopback_addr('127.0.1.1'))
         self.assertTrue(dozenos.utils.network.is_loopback_addr('127.1.1.1'))
@@ -44,6 +44,15 @@ class TestDozenOSUtilsNetwork(TestCase):
 
         self.assertFalse(dozenos.utils.network.is_loopback_addr('::2'))
         self.assertFalse(dozenos.utils.network.is_loopback_addr('192.0.2.1'))
+
+    def test_are_same_ip(self):
+        self.assertTrue(dozenos.utils.network._are_same_ip('192.0.2.1', '192.0.2.1'))
+        self.assertFalse(dozenos.utils.network._are_same_ip('192.0.2.1', '192.0.2.2'))
+        self.assertTrue(dozenos.utils.network._are_same_ip('::1', '::1'))
+        self.assertFalse(dozenos.utils.network._are_same_ip('::1', '::2'))
+        # mixed address families must never compare equal, and must not raise
+        self.assertFalse(dozenos.utils.network._are_same_ip('192.0.2.1', '::1'))
+        self.assertFalse(dozenos.utils.network._are_same_ip('::1', '192.0.2.1'))
 
     def test_check_port_availability(self):
         self.assertTrue(dozenos.utils.network.check_port_availability('::1', 8080))
