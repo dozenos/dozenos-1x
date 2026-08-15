@@ -98,7 +98,8 @@ def get_interface_type(intf: str) -> str:
     return intf_type
 
 def get_new_interfaces() -> dict:
-    """ Read any new interface data left in /run/udev/dozenos by dozenos_net_name
+    """ Read any new interface data left in /run/udev/dozenos by
+    dozenos-net-name-resolve.py for interfaces without a configured hw-id
     """
     interfaces = {}
 
