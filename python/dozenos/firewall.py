@@ -17,7 +17,6 @@ import re
 
 from socket import AF_INET
 from socket import AF_INET6
-from socket import gaierror
 from socket import getaddrinfo
 
 from dozenos.template import is_ipv4
@@ -81,7 +80,7 @@ def fqdn_resolve(fqdn, ipv6=False):
     try:
         res = getaddrinfo(fqdn, None, AF_INET6 if ipv6 else AF_INET)
         return set(item[4][0] for item in res)
-    except gaierror:
+    except OSError:
         return None
 
 def find_nftables_rule(table, chain, rule_matches=[]):
