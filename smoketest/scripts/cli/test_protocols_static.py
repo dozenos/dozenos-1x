@@ -597,7 +597,7 @@ class TestProtocolsStatic(DozenOSUnitTestSHIM.TestCase):
         # When running via dozenos-build under the QEMU environment a local DHCP
         # server is available. This test verifies that the default route is set.
         # When not running under the DozenOS QEMU environment, this test is skipped.
-        if not os.path.exists('/tmp/dozenos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under DozenOS CI/CD QEMU environment!')
 
         interface = 'eth0'
@@ -636,7 +636,7 @@ class TestProtocolsStatic(DozenOSUnitTestSHIM.TestCase):
         # When running via dozenos-build under the QEMU environment a local DHCP
         # server is available. This test verifies that the default route is set.
         # When not running under the DozenOS QEMU environment, this test is skipped.
-        if not os.path.exists('/tmp/dozenos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under DozenOS CI/CD QEMU environment!')
 
         interface = 'eth0'
@@ -684,7 +684,7 @@ class TestProtocolsStatic(DozenOSUnitTestSHIM.TestCase):
         # When running via dozenos-build under the QEMU environment a local DHCP
         # server is available. This test verifies that static routes with
         # dhcp-interface are configured correctly.
-        if not os.path.exists('/tmp/dozenos.smoketests.hint'):
+        if not self.running_in_smoketest_harness():
             self.skipTest('Not running under DozenOS CI/CD QEMU environment!')
 
         dhcp_interface = 'eth0'
