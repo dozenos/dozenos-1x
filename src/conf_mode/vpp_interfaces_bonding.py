@@ -19,11 +19,14 @@
 
 from dozenos.config import Config
 from dozenos.configdict import get_interface_dict
+from dozenos.configdict import has_vlan_subinterface_configured
 from dozenos.configdict import is_node_changed
+from dozenos.configdict import leaf_node_changed
 from dozenos.configdep import set_dependents, call_dependents
 from dozenos.configverify import verify_mtu_ipv6
 from dozenos import ConfigError
 from dozenos.utils.assertion import assert_mac
+from dozenos.utils.dict import dict_search
 from dozenos.utils.process import is_systemd_service_active
 
 from dozenos.ifconfig import Interface
@@ -117,6 +120,21 @@ def get_config(config=None) -> dict:
             config.update({'rebuild_required': {}})
 
     config['bond_members'] = deps_bond_dict(conf)
+
+    # Members that get detached (removed from the bond, or temporarily
+    # detached and re-attached during a rebuild) keep promiscuous mode
+    # enabled if they have their own VLAN (vif/vif-s) sub-interfaces
+    # configured
+    removed_members = (
+        leaf_node_changed(conf, iface_path + ['member', 'interface']) or []
+    )
+    current_members = dict_search('member.interface', config, default=[])
+    vlan_candidates = set(removed_members + current_members)
+    config['vlan_members'] = [
+        member
+        for member in vlan_candidates
+        if has_vlan_subinterface_configured(conf, member)
+    ]
 
     # Dependency
     config['xconn_members'] = deps_xconnect_dict(conf)
