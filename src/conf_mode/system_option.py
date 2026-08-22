@@ -27,22 +27,27 @@ from dozenos.base import Warning
 from dozenos.config import Config
 from dozenos.configverify import verify_source_interface
 from dozenos.configverify import verify_interface_exists
+from dozenos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
+from dozenos.system import image
 from dozenos.system import grub_util
 from dozenos.template import render
 from dozenos.utils.boot import boot_configuration_complete
 from dozenos.utils.convert import range_str_to_list
 from dozenos.utils.convert import list_to_range_str
+from dozenos.utils.convert import human_to_bytes
 from dozenos.utils.cpu import get_cpus
 from dozenos.utils.cpu import get_available_cpus
 from dozenos.utils.dict import dict_search
 from dozenos.utils.file import write_file
-from dozenos.utils.file import read_file
 from dozenos.utils.kernel import check_kmod
+from dozenos.utils.kernel import get_kernel_boot_arg
+from dozenos.utils.kernel import get_crash_kernel_size
 from dozenos.utils.process import cmdl
 from dozenos.utils.process import is_systemd_service_running
 from dozenos.utils.network import is_addr_assigned
 from dozenos.utils.network import is_intf_addr_assigned
 from dozenos.utils.system import sysctl_write
+from dozenos.utils.memory import get_memory_info
 from dozenos.configdep import set_dependents
 from dozenos.configdep import call_dependents
 from dozenos import ConfigError
@@ -73,6 +78,15 @@ tuned_profiles = {
     'virtual-guest': 'virtual-guest',
     'virtual-host': 'virtual-host',
 }
+
+# Path to the kdump-tools configuration file controlling dump behaviour
+KDUMP_CONFIG_FILE = '/etc/default/kdump-tools'
+
+# initramfs-tools drop-in configuration applied during kdump initrd
+# generation. Named with 'zzzz-' prefix to ensure it is sourced last,
+# overriding any conflicting settings from other drop-ins (including the
+# `MODULES=dep` override written by the kdump-tools kernel postinst hook).
+KDUMP_INITRAMFS_HOOK = '/etc/initramfs-tools/conf.d/zzzz-kdump-dozenos-overlay'
 
 MANAGED_PARAMS = {
     'hugepages1g': {
@@ -169,6 +183,11 @@ MANAGED_PARAMS = {
         'clean': r'numa_balancing=\S+',
         'type': str,
     },
+    'crashkernel': {
+        'parse': r'crashkernel=(?P<crashkernel>\S+)',
+        'clean': r'crashkernel=\S+',
+        'type': str,
+    },
 }
 
 # Compiled regex pattern for parsing command line options
@@ -199,8 +218,17 @@ def get_config(config=None):
         conf = Config()
     base = ['system', 'option']
     options = conf.get_config_dict(
-        base, key_mangling=('-', '_'), get_first_key=True, with_recursive_defaults=True
+        base,
+        key_mangling=('-', '_'),
+        get_first_key=True,
+        with_recursive_defaults=True,
+        with_pki=True,
     )
+
+    if 'kdump' not in options:
+        options['kdump'] = {}
+    options['kdump']['is_live_boot'] = image.is_live_boot()
+    options['kdump']['disabled'] = not conf.exists(base + ['kdump'])
 
     if 'performance' in options:
         # Update IPv4/IPv6 and sysctl options after tuned applied it's settings
@@ -315,6 +343,32 @@ def verify(options):
                     f'({reserved_gb} GB is reserved for system usage and services)'
                 )
 
+    if not options['kdump']['disabled']:
+        kdump = options['kdump']
+
+        if kdump.get('is_live_boot'):
+            raise ConfigError('kdump is not supported on live boot images')
+
+        # Check that the configured crash kernel memory does not exceed the
+        # total system RAM for the applicable range
+        memory = kdump.get('memory')
+        if memory and memory != 'auto':
+            memory_info = get_memory_info()
+            # Convert kilobytes to bytes
+            memory_total = memory_info['MemTotal'] * 1024
+
+            # 'memory_info' doesn't consider crash kernel reservation size
+            memory_total += get_crash_kernel_size()
+
+            # Convert scalar value from megabytes to bytes
+            memory_bytes = human_to_bytes(f'{memory}mb')
+
+            # Ensure that specified memory does not exceed total virtual memory
+            if memory_bytes >= memory_total:
+                raise ConfigError(
+                    f'Specified kdump memory {memory!r} exceeds the available system RAM'
+                )
+
     return None
 
 
@@ -402,6 +456,45 @@ def generate(options):
             if count:
                 cmdline_options.append(f'hugepages={count}')
 
+    kdump = options['kdump']
+    if not kdump['disabled']:
+        # Crash kernel memory reservation
+        kdump_memory = kdump.get('memory')
+        if kdump_memory:
+            if kdump_memory == 'auto':
+                # Tiered auto-sizing based on total system RAM
+                kdump_memory = KDUMP_DEFAULT_MEMORY_AUTO
+            else:
+                # Append suffix (megabytes) to right format
+                kdump_memory = f'{kdump_memory}M'
+
+            # The `crashkernel=` parameter instructs the boot kernel to reserve a
+            # dedicated memory region for the capture kernel.
+            cmdline_options.append(f'crashkernel={kdump_memory}')
+
+        # Render the kdump-tools configuration file from the Jinja2 template
+        render(KDUMP_CONFIG_FILE, 'system/kdump_tools.conf.j2', kdump)
+
+        # DozenOS uses an OverlayFS root filesystem. When mkinitramfs runs with
+        # `MODULES=dep`, it attempts to determine which kernel modules are needed
+        # by walking up the device tree from /. On a real block device
+        # this works correctly, but OverlayFS has no backing block device to walk from,
+        # causing mkinitramfs to fail with:
+        #   mkinitramfs: failed to determine device for /
+        write_file(KDUMP_INITRAMFS_HOOK, 'MODULES=most')
+    else:
+        # kdump has been disabled - render the
+        # kdump-tools configuration with the disabled flag so the service
+        # starts in a no-op state rather than attempting to load a capture
+        # kernel with stale or missing parameters.
+        render(KDUMP_CONFIG_FILE, 'system/kdump_tools.conf.j2', kdump)
+
+        # Remove ephemeral files after the feature is disabled
+        kdump_delete_files = (KDUMP_INITRAMFS_HOOK,)
+        for delete_file in kdump_delete_files:
+            if os.path.exists(delete_file):
+                os.unlink(delete_file)
+
     cmdline_options_str = ' '.join(cmdline_options)
 
     grub_util.update_kernel_cmdline_options(cmdline_options_str)
@@ -465,7 +558,7 @@ def generate_cmdline_for_kexec(options):
             - new_cmdline (str): The updated kernel command line string.
     """
     # Read current cmdline and parse it
-    current_cmdline = read_file('/proc/cmdline').strip()
+    current_cmdline = get_kernel_boot_arg().strip()
     current_parsed = parse_cmdline(current_cmdline)
 
     # Parse desired options from options['cmdline_options']

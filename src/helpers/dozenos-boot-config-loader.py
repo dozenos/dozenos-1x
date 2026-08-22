@@ -29,6 +29,7 @@ from dozenos.configsession import ConfigSessionError
 from dozenos.configtree import ConfigTree
 from dozenos.utils.process import cmdl
 from dozenos.utils.file import write_file
+from dozenos.utils.kernel import get_kernel_boot_arg
 
 STATUS_FILE = config_status
 TRACE_FILE = '/tmp/boot-config-trace'
@@ -45,11 +46,9 @@ else:
 LOG_FILE = LOG_DIR + '/dozenos-boot-config-loader.log'
 
 try:
-    with open('/proc/cmdline', 'r') as f:
-        cmdline = f.read()
-    if 'dozenos-debug' in cmdline:
+    if get_kernel_boot_arg('dozenos-debug') is not None:
         os.environ['DOZENOS_DEBUG'] = 'yes'
-    if 'dozenos-config-debug' in cmdline:
+    if get_kernel_boot_arg('dozenos-config-debug') is not None:
         os.environ['DOZENOS_DEBUG'] = 'yes'
         trace_config = True
 except Exception as e:

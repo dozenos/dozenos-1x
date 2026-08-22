@@ -31,6 +31,7 @@ from dozenos.utils.activate import set_activation
 from dozenos.utils.activate import is_active
 from dozenos.utils.system import load_as_module
 from dozenos.utils.func import FalseCallable
+from dozenos.utils.kernel import get_kernel_boot_arg
 from dozenos.defaults import directories
 from dozenos.defaults import activation_list
 
@@ -55,7 +56,7 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 
-if 'dozenos-activate-debug' in Path('/proc/cmdline').read_text():
+if get_kernel_boot_arg('dozenos-activate-debug') is not None:
     print(f'\nactivate-debug enabled: file {checkpoint_file}_* on error')
     debug = checkpoint_file
     logger.setLevel(logging.DEBUG)

@@ -20,7 +20,7 @@ import sys
 import time
 from argparse import ArgumentParser
 from shutil import copyfile
-from dozenos.utils.file import read_file
+from dozenos.utils.kernel import get_kernel_boot_arg
 
 from dozenos.migrate import ConfigMigrate
 from dozenos.migrate import ConfigMigrateError
@@ -81,6 +81,5 @@ if backup is not None and not config_migrate.config_modified:
 
 # T1771: add knob on Kernel command-line to simulate failed config migrator run
 # used to test if the automatic image reboot works.
-kernel_cmdline = read_file('/proc/cmdline')
-if 'dozenos-fail-migration' in kernel_cmdline.split():
+if get_kernel_boot_arg('dozenos-fail-migration') is not None:
     sys.exit(1)

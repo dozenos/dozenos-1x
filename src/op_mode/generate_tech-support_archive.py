@@ -18,6 +18,7 @@
 import os
 import argparse
 import glob
+import json
 from datetime import datetime
 from pathlib import Path
 from shutil import rmtree
@@ -25,7 +26,9 @@ from socket import gethostname
 from sys import exit
 from tarfile import open as tar_open
 
+from dozenos.base import Warning
 from dozenos.defaults import directories
+from dozenos.utils.process import rc_cmd
 from dozenos.utils.process import call
 from dozenos.utils.process import cmdl
 from dozenos.utils.file import get_name_from_path
@@ -38,6 +41,8 @@ ARCHIVE_PATTERN = '_tech-support-archive_'
 ARCHIVE_TMP_DIR_PATTERN = 'drops-debug_'
 DEFAULT_TMP_DIR = '/tmp'
 EXCLUDED_ARCHIVE_EXT = ('.iso', '.gz', '.tar', '.zip')
+
+dozenos_op_scripts_dir = directories['op_mode']
 
 
 def __rotate_logs(path: str, log_pattern:str):
@@ -54,7 +59,6 @@ def __save_show_report_files(reports_dir: Path):
     :type reports_dir: pathlib.Path
     """
 
-    dozenos_op_scripts_dir = directories['op_mode']
     script_path = f'{dozenos_op_scripts_dir}/show_techsupport_report.py'
     arguments = [
         '--launched-from-generate-archive',
@@ -111,6 +115,28 @@ def __generate_archived_files(location_path: str) -> None:
         'config': '/opt/vyatta/etc/config',
         'run': '/run',
     }
+
+    # Get the directory of the last crash dump and add the crash directory to archive dictionary
+    err_code, out = rc_cmd([f'{dozenos_op_scripts_dir}/kdump.py', 'show_dumps', '--raw'])
+    if not err_code:
+        try:
+            dumps = json.loads(out)
+        except json.decoder.JSONDecodeError as e:
+            Warning(f'Unable to parse kdump dump list. {e}')
+            dumps = []
+
+        if dumps:
+            last_dump = dumps[-1]
+            # Before enabling the dump, consider the size as
+            # it can range from hundreds of MB to several GB
+            max_dump_archive_bytes = 1 * 1024**3  # 1 GB cap
+            if last_dump['size_bytes'] > max_dump_archive_bytes:
+                size_human = last_dump['size_human']
+                Warning(
+                    f"Skipping crash dump archival: {size_human} exceeds limit 1 GB"
+                )
+            else:
+                archive_dict['last-crash-dump'] = last_dump['directory']
 
     for archive_name, path in archive_dict.items():
         if not os.path.exists(path):

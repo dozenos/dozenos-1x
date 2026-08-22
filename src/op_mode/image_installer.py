@@ -48,6 +48,7 @@ from dozenos.config_mgmt import unsaved_commits
 from dozenos.defaults import base_dir
 from dozenos.defaults import directories
 from dozenos.defaults import activation_hint
+from dozenos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
 from dozenos.flavor import get_image_serial_console
 from dozenos.remote import download
 from dozenos.system import disk
@@ -526,9 +527,11 @@ def get_cli_kernel_options(config_file: str) -> list:
     config = ConfigTree(read_file(config_file))
     config_dict = loads(config.to_json())
     cmdline_options = []
-    kernel_options = dict_search('system.option.kernel', config_dict)
-    if kernel_options is None:
+
+    options = dict_search('system.option', config_dict)
+    if options is None:
         return cmdline_options
+    kernel_options = options.get('kernel', {})
 
     k_cpu_opts = kernel_options.get('cpu', {})
     k_memory_opts = kernel_options.get('memory', {})
@@ -591,6 +594,17 @@ def get_cli_kernel_options(config_file: str) -> list:
             count = settings.get('hugepage-count')
             if count:
                 cmdline_options.append(f'hugepages={count}')
+
+    # Crash kernel memory reservation for the capture kernel
+    kdump_memory = options.get('kdump', {}).get('memory')
+    if kdump_memory:
+        if kdump_memory == 'auto':
+            # Tiered auto-sizing based on total system RAM
+            kdump_memory = KDUMP_DEFAULT_MEMORY_AUTO
+        else:
+            # Append suffix (megabytes) to right format
+            kdump_memory = f'{kdump_memory}M'
+        cmdline_options.append(f'crashkernel={kdump_memory}')
 
     return cmdline_options
 

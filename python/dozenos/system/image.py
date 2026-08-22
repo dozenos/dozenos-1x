@@ -23,6 +23,7 @@ from json import loads
 
 from dozenos.defaults import directories
 from dozenos.system import disk, grub
+from dozenos.utils.kernel import get_kernel_boot_arg
 
 # Define variables
 GRUB_DIR_MAIN: str = '/boot/grub'
@@ -30,8 +31,12 @@ GRUB_DIR_DOZENOS: str = f'{GRUB_DIR_MAIN}/grub.cfg.d'
 CFG_DOZENOS_VARS: str = f'{GRUB_DIR_DOZENOS}/20-dozenos-defaults-autoload.cfg'
 GRUB_DIR_DOZENOS_VERS: str = f'{GRUB_DIR_DOZENOS}/dozenos-versions'
 # prepare regexes
-REGEX_KERNEL_CMDLINE: str = r'^BOOT_IMAGE=/(?P<boot_type>boot|live)/((?P<image_version>.+)/)?vmlinuz.*$'
-REGEX_SYSTEM_CFG_VER: str = r'(\r\n|\r|\n)SYSTEM_CFG_VER\s*=\s*(?P<cfg_ver>\d+)(\r\n|\r|\n)'
+REGEX_KERNEL_CMDLINE: str = (
+    r'^/(?P<boot_type>boot|live)/((?P<image_version>.+)/)?vmlinuz.*$'
+)
+REGEX_SYSTEM_CFG_VER: str = (
+    r'(\r\n|\r|\n)SYSTEM_CFG_VER\s*=\s*(?P<cfg_ver>\d+)(\r\n|\r|\n)'
+)
 
 
 # structures definitions
@@ -198,8 +203,8 @@ def get_running_image() -> str:
     """
     running_image: str = ''
     regex_filter = re_compile(REGEX_KERNEL_CMDLINE)
-    cmdline: str = Path('/proc/cmdline').read_text()
-    running_image_result = regex_filter.match(cmdline)
+    cmdline_arg: str = get_kernel_boot_arg('BOOT_IMAGE') or ''
+    running_image_result = regex_filter.match(cmdline_arg)
     if running_image_result:
         running_image: str = running_image_result.groupdict().get(
             'image_version', '')
@@ -260,8 +265,8 @@ def is_live_boot() -> bool:
         bool: True if the system currently booted in live mode
     """
     regex_filter = re_compile(REGEX_KERNEL_CMDLINE)
-    cmdline: str = Path('/proc/cmdline').read_text()
-    running_image_result = regex_filter.match(cmdline)
+    cmdline_arg: str = get_kernel_boot_arg('BOOT_IMAGE') or ''
+    running_image_result = regex_filter.match(cmdline_arg)
     if running_image_result:
         boot_type: str = running_image_result.groupdict().get('boot_type', '')
         if boot_type == 'boot':
