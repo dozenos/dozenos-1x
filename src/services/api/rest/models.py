@@ -304,9 +304,35 @@ class PoweroffModel(ApiModel):
         }
 
 
+class PingModel(ApiModel):
+    op: StrictStr
+    host: StrictStr
+    count: StrictInt = 5
+    vrf: StrictStr = None
+
+    @field_validator('count')
+    @classmethod
+    def check_between(cls, count: int) -> int:
+        if not 1 <= count <= 10:
+            raise ValueError('count must be between 1 and 10')
+        return count
+
+    class Config:
+        schema_extra = {
+            'example': {
+                'key': 'id_key',
+                'op': 'ping',
+                'host': 'host',
+                'count': 5,
+                'vrf': 'vrf',
+            }
+        }
+
+
 class TracerouteModel(ApiModel):
     op: StrictStr
     host: StrictStr
+    vrf: StrictStr | None = None
 
     class Config:
         schema_extra = {
@@ -314,6 +340,7 @@ class TracerouteModel(ApiModel):
                 'key': 'id_key',
                 'op': 'traceroute',
                 'host': 'host',
+                'vrf': 'vrf',
             }
         }
 

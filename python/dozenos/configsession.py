@@ -89,6 +89,7 @@ RENEW = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'renew']
 POWEROFF = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'poweroff']
 OP_CMD_ADD = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'add']
 OP_CMD_DELETE = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'delete']
+PING = ['/opt/vyatta/bin/vyatta-op-cmd-wrapper', 'ping']
 TRACEROUTE = [
     '/usr/libexec/dozenos/op_mode/mtr_execute.py',
     'mtr',
@@ -487,6 +488,16 @@ class ConfigSession(object):
         out = self.__run_command(SHOW + ['container', 'image'])
         return out
 
-    def traceroute(self, host):
-        out = self.__run_command(TRACEROUTE + [host])
+    def ping(self, host, count: int = 5, vrf: str | None = None):
+        cmd = PING + [host, 'count', str(count)]
+        if vrf is not None:
+            cmd += ['vrf', vrf]
+        out = self.__run_command(cmd)
+        return out
+
+    def traceroute(self, host, vrf: str | None = None):
+        cmd = TRACEROUTE + [host]
+        if vrf is not None:
+            cmd += ['--vrf', vrf]
+        out = self.__run_command(cmd)
         return out
