@@ -27,6 +27,8 @@ from dozenos.utils.process import call
 from dozenos.utils.process import run
 from dozenos.template import render
 from dozenos.template import get_ipv4
+from dozenos.template import get_ipv6
+from dozenos.template import is_ipv4
 from dozenos.utils.network import is_addr_assigned
 from dozenos import ConfigError
 from dozenos import airbag
@@ -69,9 +71,6 @@ def verify(conntrack):
     has_peer = False
     for interface, interface_config in conntrack['interface'].items():
         verify_interface_exists(conntrack, interface)
-        # Interface must not only exist, it must also carry an IP address
-        if len(get_ipv4(interface)) < 1:
-            raise ConfigError(f'Interface {interface} requires an IP address!')
         if 'peer' in interface_config:
             has_peer = True
 
@@ -83,6 +82,21 @@ def verify(conntrack):
             if 'peer' not in interface_config:
                 raise ConfigError('Cannot mix unicast and multicast mode!')
 
+    # The synchronization interface must have an address matching the address
+    # family selected by its peer or multicast group.
+    for interface, interface_config in conntrack['interface'].items():
+        sync_address = (
+            interface_config['peer'] if has_peer else conntrack['mcast_group']
+        )
+        address_family = 'IPv4' if is_ipv4(sync_address) else 'IPv6'
+        interface_addresses = (
+            get_ipv4(interface) if is_ipv4(sync_address) else get_ipv6(interface)
+        )
+        if not interface_addresses:
+            raise ConfigError(
+                f'Interface {interface} requires an {address_family} address!'
+            )
+
     if 'expect_sync' in conntrack:
         if len(conntrack['expect_sync']) > 1 and 'all' in conntrack['expect_sync']:
             raise ConfigError('Cannot configure expect-sync "all" with other protocols!')
@@ -91,6 +105,14 @@ def verify(conntrack):
         for address in conntrack['listen_address']:
             if not is_addr_assigned(address):
                 raise ConfigError(f'Specified listen-address {address} not assigned to any interface!')
+            if has_peer:
+                for interface_config in conntrack['interface'].values():
+                    peer = interface_config['peer']
+                    if is_ipv4(address) != is_ipv4(peer):
+                        raise ConfigError(
+                            f'Listen-address {address} does not match '
+                            f'address-family of peer {peer}!'
+                        )
 
     vrrp_group = dict_search('failover_mechanism.vrrp.sync_group', conntrack)
     if vrrp_group == None:
