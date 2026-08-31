@@ -17,14 +17,11 @@
 
 import re
 import os
-import platform
 import unittest
 
+from dozenos.utils.cpu import cpu_arch
 from dozenos.utils.kernel import check_kmod
 
-ARCH = platform.machine()
-IS_ARM64 = ARCH in ('aarch64', 'arm64')
-kernel = platform.release()
 class TestKernelModules(unittest.TestCase):
     """ DozenOS makes use of a lot of Kernel drivers, modules and features. The
     required modules which are essential for DozenOS should be tested that they are
@@ -70,6 +67,15 @@ class TestKernelModules(unittest.TestCase):
         for option in options_to_check:
             self.assertIn(option, self._config_data)
 
+    def test_nft_nat(self):
+        options_to_check = [
+            'CONFIG_NF_TABLES_INET',
+            'CONFIG_NFT_NAT'
+        ]
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
     def test_synproxy_enabled(self):
         options_to_check = [
             'CONFIG_NFT_SYNPROXY',
@@ -85,8 +91,14 @@ class TestKernelModules(unittest.TestCase):
             'CONFIG_VIRTIO_NET', 'CONFIG_VIRTIO_CONSOLE',
             'CONFIG_VIRTIO', 'CONFIG_VIRTIO_PCI',
             'CONFIG_VIRTIO_BALLOON', 'CONFIG_CRYPTO_DEV_VIRTIO',
-            'CONFIG_X86_PLATFORM_DEVICES'
             ]
+        for option in options_to_check:
+            tmp = re.findall(f'{option}=(y|m)', self._config_data)
+            self.assertTrue(tmp)
+
+    @cpu_arch('amd64')
+    def test_x86_platform_devices(self):
+        options_to_check = ['CONFIG_X86_PLATFORM_DEVICES']
         for option in options_to_check:
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
@@ -132,6 +144,7 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=y', self._config_data)
             self.assertTrue(tmp)
 
+    @cpu_arch('amd64')
     def test_amd_pstate(self):
         # AMD pstate driver required as we have "set system option kernel amd-pstate-driver"
         for option in ['CONFIG_X86_AMD_PSTATE']:
@@ -211,11 +224,8 @@ class TestKernelModules(unittest.TestCase):
             tmp = re.findall(f'{option}=(y|m)', self._config_data)
             self.assertTrue(tmp)
 
+    @cpu_arch('arm64')
     def test_arm64(self):
-        # Only required on arm64 platforms
-        if not IS_ARM64:
-            self.skipTest('Not an arm64 platform')
-
         # Marvell CN9130: CONFIG_MVPP2, CN10308
         required_options = [
             'CONFIG_MVPP2',
@@ -237,10 +247,8 @@ class TestKernelModules(unittest.TestCase):
                     tmp, msg=f'{option} must be enabled (=y or =m) on arm64'
                 )
 
+    @cpu_arch('amd64')
     def test_hypervisor_hyperv(self):
-        if IS_ARM64:
-            self.skipTest('Hyper-V only available on X86 platform')
-
         options_to_check = ['CONFIG_HYPERV_VSOCKETS', 'CONFIG_HYPERV_STORAGE',
                             'CONFIG_HYPERV_NET', 'CONFIG_HYPERV_KEYBOARD',
                             'CONFIG_HYPERV_TIMER', 'CONFIG_HYPERV_UTILS',
@@ -258,10 +266,8 @@ class TestKernelModules(unittest.TestCase):
         tmp = re.findall(r'CONFIG_HYPERV_VTL_MODE=(y|m)', self._config_data)
         self.assertFalse(tmp)
 
+    @cpu_arch('amd64')
     def test_hypervisor_vmware(self):
-        if IS_ARM64:
-            self.skipTest('VMware only available on X86 platform')
-
         options_to_check = ['CONFIG_VMWARE_VMCI_VSOCKETS', 'CONFIG_VMXNET3',
                             'CONFIG_VMWARE_BALLOON', 'CONFIG_VMWARE_VMCI',
                             'CONFIG_VMWARE_PVSCSI']
