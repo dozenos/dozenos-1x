@@ -22,8 +22,6 @@ from typing import Union
 
 from dozenos.configtree import ConfigTree
 from dozenos.utils.boot import boot_configuration_complete
-from dozenos.vyconf_session import VyconfSession
-from dozenos.vyconf_session import VyconfSessionError
 from dozenos.defaults import directories
 from dozenos.xml_ref import is_tag
 from dozenos.xml_ref import is_leaf
@@ -333,6 +331,13 @@ class ConfigSourceVyconfSession(ConfigSource):
             pid = os.environ.get('SESSION_PID', '')
             self.pid = int(pid) if pid else os.getppid()
 
+        # Imported here rather than at module scope: dozenos.vyconf_session pulls
+        # in dozenos.proto.vyconf_client and with it google.protobuf, which every
+        # consumer of dozenos.config would otherwise pay for on import even when
+        # the vyconf backend is not in use.
+        from dozenos.vyconf_session import VyconfSession
+        from dozenos.vyconf_session import VyconfSessionError
+
         self._vyconf_session = VyconfSession(pid=self.pid)
         try:
             out = self._vyconf_session.get_config()
@@ -367,6 +372,8 @@ class ConfigSourceVyconfSession(ConfigSource):
         Returns:
             True if the config session has uncommitted changes, False otherwise.
         """
+        from dozenos.vyconf_session import VyconfSessionError
+
         try:
             return self._vyconf_session.session_changed()
         except VyconfSessionError:

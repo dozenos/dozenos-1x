@@ -19,7 +19,6 @@ import json
 import signal
 
 from time import time
-from tabulate import tabulate
 
 from dozenos.configquery import ConfigTreeQuery
 from dozenos.utils.convert import seconds_to_human
@@ -167,4 +166,6 @@ class VRRP(object):
 
         # add to the active list disabled instances
         groups.extend(cls.disabled())
+        from tabulate import tabulate
+
         return tabulate(groups, headers)

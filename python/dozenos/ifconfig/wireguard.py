@@ -20,11 +20,7 @@ import time
 from datetime import timedelta
 from tempfile import NamedTemporaryFile
 
-from hurry.filesize import size
-from hurry.filesize import alternative
-
 from dozenos.base import Warning
-from dozenos.configquery import ConfigTreeQuery
 from dozenos.ifconfig import Interface
 from dozenos.ifconfig import Operational
 from dozenos.template import is_ipv6
@@ -85,6 +81,11 @@ class WireGuardOperational(Operational):
         return output
 
     def show_interface(self):
+        # Imported here rather than at module scope: display-only helpers should
+        # not be on the dozenos.ifconfig import path.
+        from hurry.filesize import size
+        from hurry.filesize import alternative
+
         from dozenos.config import Config
 
         c = Config()
@@ -184,6 +185,10 @@ class WireGuardOperational(Operational):
         return output
 
     def reset_peer(self, peer_name=None, public_key=None):
+        # Imported here rather than at module scope: dozenos.configquery pulls in
+        # the whole dozenos.config tree.
+        from dozenos.configquery import ConfigTreeQuery
+
         c = ConfigTreeQuery()
         tmp = c.get_config_dict(['interfaces', 'wireguard', self.ifname],
                                 effective=True, get_first_key=True,

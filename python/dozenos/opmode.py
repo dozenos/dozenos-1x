@@ -18,8 +18,6 @@ import re
 import sys
 import typing
 
-from humps import decamelize
-from dozenos.configquery import ConfigTreeQuery
 
 class Error(Exception):
     """Any error that makes requested operation impossible to complete
@@ -320,9 +318,11 @@ def run(module):
                     f'Bare literal is not an acceptable raw output, must be a list or an object.\
                     The output was:{res}'
                 )
+            from humps import decamelize
+            from json import dumps
+
             res = decamelize(res)
             res = _normalize_field_names(res)
-            from json import dumps
 
             return dumps(res, indent=4)
     else:
@@ -337,6 +337,11 @@ def verify_cli_exists(cli_path: list, error_msg: str=''):
 
         @wraps(func)
         def _wrapper(*args, **kwargs):
+            # Imported here rather than at module scope: dozenos.configquery pulls
+            # in the whole dozenos.config tree, and most op-mode scripts import
+            # dozenos.opmode without ever using this decorator.
+            from dozenos.configquery import ConfigTreeQuery
+
             config = ConfigTreeQuery()
             interface = kwargs.get('intf_name')
 

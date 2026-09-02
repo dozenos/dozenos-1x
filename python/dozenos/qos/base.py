@@ -15,10 +15,8 @@
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import jmespath
 
 from dozenos.base import Warning
-from dozenos.ifconfig import Interface
 from dozenos.utils.process import cmdl
 from dozenos.utils.dict import dict_search
 from dozenos.utils.file import read_file
@@ -234,6 +232,13 @@ class QoSBase:
 
     def update(self, config, direction, priority=None):
         """ method must be called from derived class after it has completed qdisc setup """
+        # Imported here rather than at module scope: pulling dozenos.ifconfig in
+        # at import time is what made dozenos.qos one of the most expensive
+        # modules in the tree.
+        import jmespath
+
+        from dozenos.ifconfig import Interface
+
         if self._debug:
             import pprint
             pprint.pprint(config)

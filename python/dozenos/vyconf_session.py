@@ -32,7 +32,6 @@ from dozenos.proto.vyconf_proto import Errnum
 from dozenos.utils.commit import acquire_commit_lock_file
 from dozenos.utils.commit import release_commit_lock_file
 from dozenos.utils.commit import call_commit_hooks
-from dozenos.remote import get_config_file
 
 
 class VyconfSessionError(Exception):
@@ -247,6 +246,11 @@ class VyconfSession:
         self, file_name: str, migrate: bool = False, cached: bool = False
     ) -> tuple[str, int]:
         # pylint: disable=consider-using-with
+        # Imported here rather than at module scope: dozenos.remote pulls in
+        # paramiko and requests, which every consumer of dozenos.config would
+        # otherwise pay for on import.
+        from dozenos.remote import get_config_file
+
         file_path = tempfile.NamedTemporaryFile(delete=False).name
         err = get_config_file(file_name, file_path)
         if err:
@@ -276,6 +280,11 @@ class VyconfSession:
         self, file_name: str, migrate: bool = False, destructive: bool = False
     ) -> tuple[str, int]:
         # pylint: disable=consider-using-with
+        # Imported here rather than at module scope: dozenos.remote pulls in
+        # paramiko and requests, which every consumer of dozenos.config would
+        # otherwise pay for on import.
+        from dozenos.remote import get_config_file
+
         file_path = tempfile.NamedTemporaryFile(delete=False).name
         err = get_config_file(file_name, file_path)
         if err:

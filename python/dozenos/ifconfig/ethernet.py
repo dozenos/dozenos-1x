@@ -20,7 +20,6 @@ from glob import glob
 
 from dozenos.base import Warning
 from dozenos.ethtool import Ethtool
-from dozenos.netlink import coalesce
 from dozenos.ifconfig import Section
 from dozenos.ifconfig.interface import Interface
 from dozenos.utils.dict import dict_search
@@ -512,6 +511,11 @@ class EthernetIf(Interface):
         # Nothing to apply
         if not params:
             return None
+
+        # Imported here rather than at module scope: dozenos.netlink.coalesce
+        # imports pyroute2, which every consumer of dozenos.ifconfig would
+        # otherwise pay for on import.
+        from dozenos.netlink import coalesce
 
         # Override boolean parameters to true if they exist and supported by NIC driver
         for boolean_param in coalesce.get_all_params(boolean=True):

@@ -14,21 +14,43 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-from dozenos.utils import assertion
-from dozenos.utils import auth
-from dozenos.utils import boot
-from dozenos.utils import commit
-from dozenos.utils import configfs
-from dozenos.utils import convert
-from dozenos.utils import cpu
-from dozenos.utils import dict
-from dozenos.utils import file
-from dozenos.utils import io
-from dozenos.utils import kernel
-from dozenos.utils import list
-from dozenos.utils import locking
-from dozenos.utils import misc
-from dozenos.utils import network
-from dozenos.utils import permission
-from dozenos.utils import process
-from dozenos.utils import system
+import importlib
+
+__all__ = [
+    'assertion',
+    'auth',
+    'boot',
+    'commit',
+    'configfs',
+    'convert',
+    'cpu',
+    'dict',
+    'file',
+    'io',
+    'kernel',
+    'list',
+    'locking',
+    'misc',
+    'network',
+    'permission',
+    'process',
+    'system',
+]
+
+
+def __getattr__(name):
+    """Import submodules on first access (PEP 562).
+
+    Importing them eagerly pulled the whole set into every consumer of
+    'from dozenos.utils.<sub> import <name>', which is a measurable cost on the
+    conf-mode script path where each script is a fresh interpreter.
+    """
+    if name not in __all__:
+        raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    mod = importlib.import_module(f'{__name__}.{name}')
+    globals()[name] = mod
+    return mod
+
+
+def __dir__():
+    return sorted(list(globals()) + __all__)
