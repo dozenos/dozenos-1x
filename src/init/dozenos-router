@@ -591,6 +591,7 @@ start ()
         touch /tmp/dozenos.ifconfig.debug
         touch /tmp/dozenos.container.debug
         touch /tmp/dozenos.smoketest.debug
+        touch /tmp/dozenos.dhclient.debug
     fi
 
     # Cleanup PKI CAs
