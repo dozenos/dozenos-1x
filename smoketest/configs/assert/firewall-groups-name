@@ -12,7 +12,7 @@ set firewall ipv4 name TEST2 rule 20 action 'drop'
 set firewall ipv4 name TEST2 rule 20 source group network-group '!TEST_GROUP_'
 set interfaces ethernet eth0
 set interfaces loopback lo
-set system console device ttyS0 speed '115200'
+set system console device @SERIAL_DEVICE@ speed '@SERIAL_SPEED@'
 set system host-name 'dozenos'
 set system login user dozenos authentication encrypted-password '$6$p5Efu/2e2g8D2hJV$2jJojvJpg/NJ1ytL9Q73zsG./pdfrtJS5WU6R3VQzx0.HAucjiKixguM/DVtamnXnp0Al8bFdL7SrWQ84G1cN0'
 set system login user dozenos authentication plaintext-password ''
