@@ -40,7 +40,6 @@ from dozenos.xml_ref import is_tag
 from dozenos.base import Warning
 from dozenos.utils.backend import vyconf_backend
 from dozenos.configsource import ConfigSourceVyconfSession
-from dozenos.utils.list import list_strip
 
 config_file = os.path.join(directories['config'], 'config.boot')
 
@@ -184,9 +183,9 @@ def verify_mangling(key_mangling):
         raise ValueError('key_mangling must be a tuple of two strings')
 
 
-def op_mode_run(cmd):
+def op_mode_run(cmd, env=None):
     """low-level to avoid overhead"""
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env)
     out = p.stdout.read()
     p.wait()
     return p.returncode, out.decode()
@@ -204,15 +203,13 @@ def op_mode_config_dict(
 
     command = ['/bin/cli-shell-api', '--show-active-only', 'showConfig']
 
-    edit_level = os.environ.get('VYATTA_EDIT_LEVEL', '')
-    if edit_level:
-        tmp = edit_level.split('/')
-        edit_path = [el for el in tmp if el]
-        relative_path = list_strip(path, edit_path)
-    else:
-        relative_path = path
+    # An op-mode script may be called from within a configuration session at
+    # an arbitrary edit level; cli-shell-api resolves the requested path
+    # relative to that level. Reset the level for the child process, so the
+    # absolute path passed by the caller is always used as is.
+    env = os.environ | {'VYATTA_EDIT_LEVEL': '/', 'VYATTA_TEMPLATE_LEVEL': '/'}
 
-    rc, out = op_mode_run(command + relative_path)
+    rc, out = op_mode_run(command + path, env=env)
 
     if rc == cli_shell_api_err.DOZENOS_EMPTY_CONFIG:
         out = ''
