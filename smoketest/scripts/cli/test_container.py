@@ -79,6 +79,10 @@ class TestContainer(DozenOSUnitTestSHIM.TestCase):
 
     def test_basic(self):
         cont_name = 'c1'
+        env_key = 'TestKey'
+        env_key1 = 'TestKey1'
+        env_value = 'TestValue,*'
+        env_value1 = 'Test Spaced Values'
 
         self.cli_set(['interfaces', 'ethernet', 'eth0', 'address', '10.0.2.15/24'])
         self.cli_set(['protocols', 'static', 'route', '0.0.0.0/0',
@@ -93,6 +97,8 @@ class TestContainer(DozenOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + ['name', cont_name, 'log-driver', 'journald'])
         self.cli_set(base_path + ['name', cont_name, 'allow-host-cgroups'])
         self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
+        self.cli_set(base_path + ['name', cont_name, 'environment', env_key, 'value', env_value])
+        self.cli_set(base_path + ['name', cont_name, 'environment', env_key1, 'value', env_value1])
         # commit changes
         self.cli_commit()
 
@@ -106,6 +112,8 @@ class TestContainer(DozenOSUnitTestSHIM.TestCase):
         self.assertEqual(l['HostConfig']['LogConfig']['Type'], 'journald')
         self.assertEqual(l['Config']['Healthcheck']['Test'], ['NONE'])
         self.assertEqual(l['HostConfig']['CgroupMode'], 'host')
+        self.assertIn(f'{env_key}={env_value}', l['Config']['Env'])
+        self.assertIn(f'{env_key1}={env_value1}', l['Config']['Env'])
 
         # cleanup
         self.cli_delete(['interfaces', 'ethernet', 'eth0', 'address'])

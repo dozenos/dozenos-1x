@@ -474,7 +474,7 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
 
     if 'environment' in container_config:
         for k, v in container_config['environment'].items():
-            out.append(f'Environment={k}={v["value"]}')
+            out.append(f'Environment={k}="{v["value"]}"')
 
     if 'health_check' in container_config:
         if 'command' in container_config['health_check']:
@@ -500,7 +500,7 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
 
     if 'label' in container_config:
         for k, v in container_config['label'].items():
-            out.append(f'Label={k}={v["value"]}')
+            out.append(f'Label={k}="{v["value"]}"')
 
     if 'name_server' in container_config:
         for ns in container_config['name_server']:
@@ -571,7 +571,7 @@ def generate_quadlet_options(name, container_config, host_ident, network_config)
 
     if 'sysctl' in container_config and 'parameter' in container_config['sysctl']:
         for k, v in container_config['sysctl']['parameter'].items():
-            out.append(f'Sysctl={k}={v["value"]}')
+            out.append(f'Sysctl={k}="{v["value"]}"')
 
     if 'tmpfs' in container_config:
         for tmpfs_config in container_config['tmpfs'].values():
