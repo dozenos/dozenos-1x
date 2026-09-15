@@ -26,7 +26,9 @@ from dozenos.configdep import call_dependents
 from dozenos.configdict import get_interface_dict
 from dozenos.configdict import is_node_changed
 from dozenos.configdict import is_vrf_changed
+from dozenos.configdict import node_changed
 from dozenos.configdict import get_flowtable_interfaces
+from dozenos.configdiff import Diff
 from dozenos.configverify import verify_address
 from dozenos.configverify import verify_dhcpv6
 from dozenos.configverify import verify_interface_exists
@@ -178,6 +180,31 @@ def get_config(config=None):
 
     tmp = is_node_changed(conf, base + [ifname, 'evpn'])
     if tmp: ethernet.update({'frr_dict' : get_frrender_dict(conf)})
+
+    # T9228: Some NIC drivers do not support changing all settings we offer on
+    # the CLI. The warning telling the user about the missing driver support is
+    # emitted while applying the configuration - which happens on every commit
+    # touching this interface. Record which nodes have been changed so the
+    # warning is only displayed if the node in question was altered, and not on
+    # any unrelated change like an interface description or IP address.
+    tmp = node_changed(
+        conf,
+        base + [ifname, 'offload'],
+        key_mangling=('-', '_'),
+        expand_nodes=Diff.ADD | Diff.DELETE,
+    )
+    if tmp:
+        ethernet.update({'offload_changed': tmp})
+
+    for node, key in {
+        'disable-flow-control': 'flow_control_changed',
+        'ring-buffer': 'ring_buffer_changed',
+        'interrupt-coalescing': 'coalesce_changed',
+        'switchdev': 'switchdev_changed',
+    }.items():
+        tmp = is_node_changed(conf, base + [ifname, node])
+        if tmp:
+            ethernet.update({key: {}})
 
     ethernet['flowtable_interfaces'] = get_flowtable_interfaces(conf)
 
