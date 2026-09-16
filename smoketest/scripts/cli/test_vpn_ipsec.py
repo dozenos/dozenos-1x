@@ -172,6 +172,26 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
     def tearDownPKI(self):
         self.cli_delete(['pki'])
 
+    def assertConfigLine(self, config, line):
+        """Assert that `line` occurs as a complete line in `config`.
+
+        assertIn(line, config) is a substring test, so a check for
+        'proposals = X' is also satisfied by the longer 'esp_proposals = X'.
+        Comparing against the list of stripped lines requires a whole-line
+        match, which cannot be satisfied by a longer key sharing the suffix.
+        """
+        expected = line.strip()
+        if '\n' in expected:
+            self.fail(f'assertConfigLine() expects a single line, got: {expected!r}')
+        lines = [entry.strip() for entry in config.splitlines()]
+        if expected not in lines:
+            key = expected.split('=', 1)[0].strip()
+            near = [entry for entry in lines if entry.split('=', 1)[0].strip() == key]
+            self.fail(
+                f'Line "{expected}" not found in the generated configuration'
+                + (f' - found instead: {near}' if near else '')
+            )
+
     def test_dhcp_fail_handling(self):
         # Skip process check - connection is not created for this test
         self.skip_process_check = True
@@ -247,13 +267,13 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # Verify strongSwan configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes128-sha1-modp1024')
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
             f'life_bytes = {life_bytes}',
             f'life_packets = {life_packets}',
             f'rekey_time = 28800s', # default value
-            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'life_time = 3600s', # default value
             f'local_addrs = {local_address} # dhcp:no',
@@ -401,13 +421,13 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # Verify strongSwan configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes128-sha1-modp1024')
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
             f'life_bytes = {life_bytes}',
             f'life_packets = {life_packets}',
             f'rekey_time = 28800s',  # default value
-            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'life_time = 3600s',  # default value
             f'local_addrs = {local_address} # dhcp:no',
@@ -480,10 +500,12 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # Verify strongSwan configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(
+            swanctl_conf, 'proposals = aes128-sha1-modp1024,aes256-sha1-modp1536'
+        )
         swanctl_conf_lines = [
             'version = 2',
             'auth = psk',
-            'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024,aes256-sha1-modp1536-noesn,aes256-sha1-modp1536',
             'esp_proposals = aes128-sha1-modp2048-noesn,aes128-sha1-modp2048,aes256-sha1-modp2048-noesn,aes256-sha1-modp2048',
             'life_time = 3600s',
             'mode = transport',  # ensure transport mode is used
@@ -547,10 +569,10 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
         # not have a lookup key configuration - thus we shift the key by one
         # to also support a vti0 interface
         if_id = str(int(if_id) +1)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes128-sha1-modp1024')
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
-            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'local_addrs = {local_address} # dhcp:no',
             f'mobike = no',
@@ -623,10 +645,10 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
         # not have a lookup key configuration - thus we shift the key by one
         # to also support a vti0 interface
         if_id = str(int(if_id) +1)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes128-sha1-modp1024')
         swanctl_conf_lines = [
             f'version = 2',
             f'auth = psk',
-            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'local_addrs = {local_address} # dhcp:no',
             f'mobike = no',
@@ -759,6 +781,9 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # Verify strongSwan configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(
+            swanctl_conf, 'proposals = aes256gcm128-sha384-prfsha384-ecp384'
+        )
         swanctl_conf_lines = [
             f'ppk_id = ppk-test',
             f'ppk_required = yes',
@@ -766,7 +791,6 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
             f'version = 2',
             f'auth = psk',
             f'rekey_time = 86400s',
-            f'proposals = aes256gcm128-sha384-prfsha384-ecp384-noesn,aes256gcm128-sha384-prfsha384-ecp384',
             f'esp_proposals = aes256gcm128-sha384-ecp384-noesn,aes256gcm128-sha384-ecp384',
             f'life_time = 28800s',  # default value
             f'local_addrs = {local_address} # dhcp:no',
@@ -869,8 +893,8 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes256-sha1-prfsha1-modp1024')
         swanctl_lines = [
-            f'proposals = aes256-sha1-prfsha1-modp1024-noesn,aes256-sha1-prfsha1-modp1024',
             f'version = 1',
             f'rekey_time = {ike_lifetime}s',
             f'rekey_time = {esp_lifetime}s',
@@ -924,6 +948,7 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
         # not have a lookup key configuration - thus we shift the key by one
         # to also support a vti0 interface
         if_id = str(int(if_id) +1)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes128-sha1-modp1024')
         swanctl_lines = [
             f'{connection_name}',
             f'version = 0', # key-exchange not set - defaulting to 0 for ikev1 and ikev2
@@ -933,7 +958,6 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
             f'id = "{peer_name}"',
             f'auth = pubkey',
             f'certs = {peer_name}.pem',
-            f'proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'esp_proposals = aes128-sha1-modp1024-noesn,aes128-sha1-modp1024',
             f'local_addrs = {local_address} # dhcp:no',
             f'remote_addrs = {peer_ip}',
@@ -1185,11 +1209,14 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # verify applied configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(
+            swanctl_conf,
+            'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+        )
         swanctl_lines = [
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1305,11 +1332,14 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # verify applied configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(
+            swanctl_conf,
+            'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+        )
         swanctl_lines = [
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1421,11 +1451,14 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # verify applied configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(
+            swanctl_conf,
+            'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+        )
         swanctl_lines = [
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1619,11 +1652,14 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # verify applied configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(
+            swanctl_conf,
+            'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+        )
         swanctl_lines = [
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = 0s',
@@ -1732,11 +1768,14 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # verify applied configuration
         swanctl_conf = read_file(swanctl_file)
+        self.assertConfigLine(
+            swanctl_conf,
+            'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+        )
         swanctl_lines = [
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -1865,11 +1904,14 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
         # to also support a vti0 interface
         if_id = str(int(if_id) +1)
 
+        self.assertConfigLine(
+            swanctl_conf,
+            'proposals = aes256-sha512-modp2048,aes256-sha256-modp2048,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048',
+        )
         swanctl_lines = [
             f'{conn_name}',
             f'remote_addrs = %any',
             f'local_addrs = {local_address}',
-            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048,aes256-sha256-modp2048-noesn,aes256-sha256-modp2048,aes256-sha256-modp1024-noesn,aes256-sha256-modp1024,aes128gcm128-sha256-modp2048-noesn,aes128gcm128-sha256-modp2048',
             f'version = 2',
             f'send_certreq = no',
             f'rekey_time = {ike_lifetime}s',
@@ -2010,12 +2052,11 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
 
         # esn - default, disabled
         swanctl_conf = read_file(swanctl_file)
-        swanctl_conf_lines = [
-            f'proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048',
-            f'esp_proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048',
-        ]
-        for line in swanctl_conf_lines:
-            self.assertIn(line, swanctl_conf)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes256-sha512-modp2048')
+        self.assertIn(
+            'esp_proposals = aes256-sha512-modp2048-noesn,aes256-sha512-modp2048',
+            swanctl_conf,
+        )
 
         # esn - optional
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'esn', 'optional'])
@@ -2023,12 +2064,11 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         swanctl_conf = read_file(swanctl_file)
-        swanctl_conf_lines = [
-            f'proposals = aes256-sha512-modp2048-esn-noesn,aes256-sha512-modp2048',
-            f'esp_proposals = aes256-sha512-modp2048-esn-noesn,aes256-sha512-modp2048',
-        ]
-        for line in swanctl_conf_lines:
-            self.assertIn(line, swanctl_conf)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes256-sha512-modp2048')
+        self.assertIn(
+            'esp_proposals = aes256-sha512-modp2048-esn-noesn,aes256-sha512-modp2048',
+            swanctl_conf,
+        )
 
         # esn - required
         self.cli_set(base_path + ['ike-group', ike_group, 'proposal', '1',  'esn', 'required'])
@@ -2036,12 +2076,8 @@ class TestVPNIPsec(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         swanctl_conf = read_file(swanctl_file)
-        swanctl_conf_lines = [
-            f'proposals = aes256-sha512-modp2048-esn',
-            f'esp_proposals = aes256-sha512-modp2048-esn',
-        ]
-        for line in swanctl_conf_lines:
-            self.assertIn(line, swanctl_conf)
+        self.assertConfigLine(swanctl_conf, 'proposals = aes256-sha512-modp2048')
+        self.assertIn('esp_proposals = aes256-sha512-modp2048-esn', swanctl_conf)
 
 
 if __name__ == '__main__':

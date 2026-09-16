@@ -185,11 +185,11 @@ class TestDozenOSTemplate(TestCase):
         }
 
         for group_name, group_config in data['esp_group'].items():
-            ciphers = dozenos.template.get_esp_ike_cipher(group_config)
+            ciphers = dozenos.template.get_esp_cipher(group_config)
             self.assertIn(ESP_DEFAULT, ','.join(ciphers))
 
         for group_name, group_config in data['ike_group'].items():
-            ciphers = dozenos.template.get_esp_ike_cipher(group_config)
+            ciphers = dozenos.template.get_ike_cipher(group_config)
             self.assertIn(IKEv2_DEFAULT, ','.join(ciphers))
 
     def test_get_default_port(self):
