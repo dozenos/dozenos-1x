@@ -21,8 +21,8 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
 from dozenos.utils.file import read_file
-from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
+from dozenos.utils.network import get_vrf_pids
 from dozenos.xml_ref import default_value
 
 PROCESS_NAME = 'chronyd'
@@ -279,8 +279,8 @@ class TestSystemNTP(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Check for process in VRF
-        tmp = cmdl(['ip', 'vrf', 'pids', vrf_name])
-        self.assertIn(PROCESS_NAME, tmp)
+        vrf_procs = [name for _, name in get_vrf_pids(vrf_name)]
+        self.assertIn(PROCESS_NAME, vrf_procs)
 
         self.cli_delete(['vrf', 'name', vrf_name])
 

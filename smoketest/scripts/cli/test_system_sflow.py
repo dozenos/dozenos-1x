@@ -21,9 +21,9 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
 from dozenos.ifconfig import Section
-from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 from dozenos.utils.file import read_file
+from dozenos.utils.network import get_vrf_pids
 
 PROCESS_NAME = 'hsflowd'
 base_path = ['system', 'sflow']
@@ -149,8 +149,8 @@ class TestSystemFlowAccounting(DozenOSUnitTestSHIM.TestCase):
         self.assertIn(f'pcap {{ dev=eth0 }}', hsflowd)
 
         # Check for process in VRF
-        tmp = cmdl(['ip', 'vrf', 'pids', vrf])
-        self.assertIn(PROCESS_NAME, tmp)
+        vrf_procs = [name for _, name in get_vrf_pids(vrf)]
+        self.assertIn(PROCESS_NAME, vrf_procs)
 
     def test_sflow_egress(self):
         interface = 'eth0'

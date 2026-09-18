@@ -24,6 +24,7 @@ from dozenos.configsession import ConfigSessionError
 from dozenos.utils.file import read_file
 from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
+from dozenos.utils.network import get_vrf_pids
 from dozenos.xml_ref import default_value
 
 DDCLIENT_SYSTEMD_UNIT = '/run/systemd/system/ddclient.service.d/override.conf'
@@ -372,8 +373,8 @@ class TestServiceDDNS(DozenOSUnitTestSHIM.TestCase):
         )
 
         # Check for process in VRF
-        proc = cmdl(['ip', 'vrf', 'pids', vrf_name])
-        self.assertIn(DDCLIENT_PNAME, proc)
+        vrf_procs = [name for _, name in get_vrf_pids(vrf_name)]
+        self.assertIn(DDCLIENT_PNAME, vrf_procs)
 
         # Cleanup VRF
         self.cli_delete(['vrf', 'name', vrf_name])

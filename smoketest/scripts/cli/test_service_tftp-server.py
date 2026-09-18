@@ -21,9 +21,9 @@ from psutil import process_iter
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
-from dozenos.utils.process import cmdl
 from dozenos.utils.file import read_file
 from dozenos.utils.process import process_named_running
+from dozenos.utils.network import get_vrf_pids
 from dozenos.template import is_ipv6
 
 PROCESS_NAME = 'in.tftpd'
@@ -141,8 +141,8 @@ class TestServiceTFTPD(DozenOSUnitTestSHIM.TestCase):
         self.assertIn('--create --umask 000', config)
 
         # Check for process in VRF
-        tmp = cmdl(['ip', 'vrf', 'pids', vrf])
-        self.assertIn(PROCESS_NAME, tmp)
+        vrf_procs = [name for _, name in get_vrf_pids(vrf)]
+        self.assertIn(PROCESS_NAME, vrf_procs)
 
         # delete VRF
         self.cli_delete(dummy_if_path + ['vrf'])
