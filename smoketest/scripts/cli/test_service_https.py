@@ -30,7 +30,6 @@ from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
 from dozenos.utils.process import call
 from dozenos.utils.process import process_named_running
-from dozenos.utils.network import get_vrf_pids
 from dozenos.pki import CERT_BEGIN
 from dozenos.pki import encode_certificate
 from dozenos.pki import load_certificate
@@ -249,8 +248,7 @@ class TestHTTPSService(DozenOSUnitTestSHIM.TestCase):
         self.cli_commit()
 
         # Verify nginx is running inside the VRF
-        vrf_procs = [name for _, name in get_vrf_pids(vrf)]
-        self.assertIn(PROCESS_NAME, vrf_procs)
+        self.verify_process_in_vrf(PROCESS_NAME, vrf)
 
         self.cli_delete(['interfaces', 'dummy', interface])
         self.cli_delete(['vrf', 'name', vrf])

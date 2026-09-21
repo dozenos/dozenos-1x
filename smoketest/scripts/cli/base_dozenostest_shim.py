@@ -28,6 +28,7 @@ from dozenos.configsession import ConfigSession
 from dozenos.configsession import ConfigSessionError
 from dozenos.frrender import mgmt_daemon
 from dozenos.utils.commit import commit_in_progress2
+from dozenos.utils.network import get_vrf_pids
 from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 
@@ -442,6 +443,17 @@ class DozenOSUnitTestSHIM:
                         matched = True
                         break
                 self.assertTrue(not matched if inverse else matched, msg=search)
+
+        def verify_process_in_vrf(self, process_name, vrf):
+            """ Verify that a process of a given name runs inside a VRF
+
+            "ip vrf pids" reports the kernel comm, which is capped at 15
+            characters and follows a process rewriting its title - ddclient
+            shows up as "ddclient - slee" - so match by prefix, not equality.
+            """
+            names = [name for _, name in get_vrf_pids(vrf)]
+            self.assertTrue(any(name.startswith(process_name) for name in names),
+                f'no {process_name} process running in VRF {vrf}: {names}')
 
         @staticmethod
         def wait_for_result(runnable, check, pause=1, timeout=10):
