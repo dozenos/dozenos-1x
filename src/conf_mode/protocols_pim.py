@@ -25,10 +25,8 @@ from sys import exit
 from dozenos.config import Config
 from dozenos.configverify import verify_interface_exists
 from dozenos.configverify import has_frr_protocol_in_dict
-from dozenos.frrender import FRRender
 from dozenos.frrender import get_frrender_dict
 from dozenos.frrender import pim_daemon
-from dozenos.utils.process import is_systemd_service_running
 from dozenos.utils.process import process_named_running
 from dozenos.utils.process import call
 from dozenos import ConfigError
@@ -88,8 +86,6 @@ def verify(config_dict):
                 unique.append(gr_addr)
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
@@ -105,8 +101,6 @@ def apply(config_dict):
     if not pim_pid:
         call('/usr/lib/frr/pimd -d -F traditional --daemon -A 127.0.0.1')
 
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

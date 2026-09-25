@@ -24,13 +24,11 @@ from dozenos.configverify import has_frr_protocol_in_dict
 from dozenos.configverify import verify_prefix_list
 from dozenos.configverify import verify_route_map
 from dozenos.configverify import verify_vrf
-from dozenos.frrender import FRRender
 from dozenos.frrender import get_frrender_dict
 from dozenos.template import is_ip
 from dozenos.utils.dict import dict_search
 from dozenos.utils.network import get_interface_vrf
 from dozenos.utils.network import is_addr_assigned
-from dozenos.utils.process import is_systemd_service_running
 from dozenos.utils.process import process_named_running
 from dozenos import ConfigError
 from dozenos import airbag
@@ -468,7 +466,7 @@ def verify(config_dict):
                 # route-reflector-client verification has been moved to neighbor-only part
 
             # T5833 not all AFIs are supported for VRF
-            if 'vrf' in bgp and 'address_family' in peer_config:
+            if vrf and 'address_family' in peer_config:
                 unsupported_vrf_afi = {
                     'ipv4_flowspec',
                     'ipv6_flowspec',
@@ -674,13 +672,9 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

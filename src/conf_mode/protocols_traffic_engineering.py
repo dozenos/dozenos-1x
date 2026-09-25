@@ -19,9 +19,7 @@ from sys import exit
 
 from dozenos.config import Config
 from dozenos.configverify import has_frr_protocol_in_dict
-from dozenos.frrender import FRRender
 from dozenos.frrender import get_frrender_dict
-from dozenos.utils.process import is_systemd_service_running
 from dozenos import ConfigError
 from dozenos import airbag
 
@@ -73,8 +71,6 @@ def verify(config_dict):
 
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 
@@ -82,8 +78,6 @@ def apply(config_dict):
     if not has_frr_protocol_in_dict(config_dict, 'traffic_engineering'):
         return None
 
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
     return None
 
 

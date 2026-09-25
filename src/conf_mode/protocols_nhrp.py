@@ -26,9 +26,7 @@ from dozenos.utils.process import run
 from dozenos.utils.dict import dict_search
 from dozenos import ConfigError
 from dozenos import airbag
-from dozenos.frrender import FRRender
 from dozenos.frrender import get_frrender_dict
-from dozenos.utils.process import is_systemd_service_running
 
 airbag.enable()
 
@@ -105,8 +103,6 @@ def generate(config_dict):
         return None
     render(nhrp_nftables_conf, 'frr/nhrpd_nftables.conf.j2', config_dict['nhrp'])
 
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 
@@ -116,8 +112,6 @@ def apply(config_dict):
     if nft_rc != 0:
         raise ConfigError('Failed to apply NHRP tunnel firewall rules')
 
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
     return None
 
 

@@ -26,7 +26,6 @@ from dozenos.configdict import node_changed
 from dozenos.configverify import verify_route_map
 from dozenos.defaults import wireguard_fwmark_pref
 from dozenos.firewall import conntrack_required
-from dozenos.frrender import FRRender
 from dozenos.frrender import get_frrender_dict
 from dozenos.ifconfig import Interface
 from dozenos.template import render
@@ -38,7 +37,6 @@ from dozenos.utils.network import get_vrf_members
 from dozenos.utils.network import interface_exists
 from dozenos.utils.process import call
 from dozenos.utils.process import cmdl
-from dozenos.utils.process import is_systemd_service_running
 from dozenos.utils.process import popen
 from dozenos.utils.system import sysctl_write
 from dozenos import ConfigError
@@ -277,8 +275,6 @@ def generate(vrf):
     # Render iproute2 VR helper names
     render(config_file, 'iproute2/vrf.conf.j2', vrf)
 
-    if 'frr_dict' in vrf and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(vrf['frr_dict'])
 
     return None
 
@@ -435,8 +431,6 @@ def apply(vrf):
             if has_rule(afi, 2000, 'l3mdev'):
                 call(f'ip {afi} rule del pref 2000 l3mdev unreachable')
 
-    if 'frr_dict' in vrf and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
 
     return None
 

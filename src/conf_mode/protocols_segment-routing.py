@@ -21,11 +21,9 @@ from sys import argv
 from dozenos.config import Config
 from dozenos.configdict import list_diff
 from dozenos.configverify import has_frr_protocol_in_dict
-from dozenos.frrender import FRRender
 from dozenos.frrender import get_frrender_dict
 from dozenos.ifconfig import Section
 from dozenos.utils.dict import dict_search
-from dozenos.utils.process import is_systemd_service_running
 from dozenos.utils.system import sysctl_write
 from dozenos import ConfigError
 from dozenos import airbag
@@ -112,8 +110,6 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
@@ -146,8 +142,6 @@ def apply(config_dict):
         else:
             sysctl_write(['net', 'ipv6', 'conf', interface, 'seg6_enabled'], '0')
 
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':

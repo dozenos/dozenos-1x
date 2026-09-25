@@ -41,8 +41,6 @@ from dozenos.configverify import verify_bond_bridge_member
 from dozenos.configverify import verify_eapol
 from dozenos.ethtool import Ethtool
 from dozenos.netlink import coalesce
-from dozenos.frrender import FRRender
-from dozenos.frrender import get_frrender_dict
 from dozenos.ifconfig import EthernetIf
 from dozenos.ifconfig import BondIf
 from dozenos.utils.dict import dict_search
@@ -177,9 +175,6 @@ def get_config(config=None):
 
     tmp = is_node_changed(conf, base + [ifname, 'duplex'])
     if tmp: ethernet.update({'speed_duplex_changed': {}})
-
-    tmp = is_node_changed(conf, base + [ifname, 'evpn'])
-    if tmp: ethernet.update({'frr_dict' : get_frrender_dict(conf)})
 
     # T9228: Some NIC drivers do not support changing all settings we offer on
     # the CLI. The warning telling the user about the missing driver support is
@@ -470,13 +465,9 @@ def verify_ethernet(ethernet: dict, ethtool: Ethtool) -> None:
     return None
 
 def generate(ethernet):
-    if 'frr_dict' in ethernet and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(ethernet['frr_dict'])
     return None
 
 def apply(ethernet):
-    if 'frr_dict' in ethernet and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
     ifname = ethernet['ifname']
     e = EthernetIf(ifname)
     if 'deleted' in ethernet:

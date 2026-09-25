@@ -33,15 +33,12 @@ from dozenos.configverify import verify_mtu_ipv6
 from dozenos.configverify import verify_vlan_config
 from dozenos.configverify import verify_vrf
 from dozenos.ethtool import Ethtool
-from dozenos.frrender import FRRender
-from dozenos.frrender import get_frrender_dict
 from dozenos.ifconfig import BondIf
 from dozenos.ifconfig.ethernet import EthernetIf
 from dozenos.utils.assertion import assert_mac
 from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_to_paths_values
 from dozenos.utils.network import interface_exists
-from dozenos.utils.process import is_systemd_service_running
 from dozenos.configdict import has_address_configured
 from dozenos.configdict import has_vrf_configured
 from dozenos.configdep import set_dependents
@@ -96,9 +93,6 @@ def get_config(config=None):
 
     tmp = is_node_changed(conf, base + [ifname, 'lacp-rate'])
     if tmp: bond.update({'shutdown_required' : {}})
-
-    tmp = is_node_changed(conf, base + [ifname, 'evpn'])
-    if tmp: bond.update({'frr_dict' : get_frrender_dict(conf)})
 
     # determine which members have been removed
     interfaces_removed = leaf_node_changed(conf, base + [ifname, 'member', 'interface'])
@@ -291,14 +285,9 @@ def verify(bond):
     return None
 
 def generate(bond):
-    if 'frr_dict' in bond and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(bond['frr_dict'])
     return None
 
 def apply(bond):
-    if 'frr_dict' in bond and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
-
     b = BondIf(bond['ifname'])
     if 'deleted' in bond:
         b.remove()

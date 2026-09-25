@@ -22,11 +22,9 @@ from sys import exit
 from glob import glob
 from dozenos.config import Config
 from dozenos.configverify import has_frr_protocol_in_dict
-from dozenos.frrender import FRRender
 from dozenos.frrender import get_frrender_dict
 from dozenos.utils.dict import dict_search
 from dozenos.utils.file import read_file
-from dozenos.utils.process import is_systemd_service_running
 from dozenos.utils.system import sysctl_write
 from dozenos.configverify import verify_interface_exists
 from dozenos import ConfigError
@@ -69,14 +67,9 @@ def verify(config_dict):
     return None
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
-
     if not has_frr_protocol_in_dict(config_dict, 'mpls'):
         return None
 

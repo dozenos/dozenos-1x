@@ -22,10 +22,8 @@ from dozenos.configverify import has_frr_protocol_in_dict
 from dozenos.configverify import verify_common_route_maps
 from dozenos.configverify import verify_access_list
 from dozenos.configverify import verify_prefix_list
-from dozenos.frrender import FRRender
 from dozenos.frrender import get_frrender_dict
 from dozenos.utils.dict import dict_search
-from dozenos.utils.process import is_systemd_service_running
 from dozenos import ConfigError
 from dozenos import airbag
 airbag.enable()
@@ -70,13 +68,9 @@ def verify(config_dict):
                                       f'with "split-horizon disable" for "{interface}"!')
 
 def generate(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().generate(config_dict)
     return None
 
 def apply(config_dict):
-    if config_dict and not is_systemd_service_running('dozenos-configd.service'):
-        FRRender().apply()
     return None
 
 if __name__ == '__main__':
