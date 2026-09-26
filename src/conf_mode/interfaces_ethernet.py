@@ -23,6 +23,8 @@ from dozenos.base import Warning
 from dozenos.config import Config
 from dozenos.configdep import set_dependents
 from dozenos.configdep import call_dependents
+from dozenos.configdep import set_dependents_initial
+from dozenos.configdep import call_dependents_initial
 from dozenos.configdict import get_interface_dict
 from dozenos.configdict import is_node_changed
 from dozenos.configdict import is_vrf_changed
@@ -49,7 +51,9 @@ from dozenos.utils.dict import dict_set
 from dozenos.utils.dict import dict_delete
 from dozenos.utils.network import get_vrf_tableid
 from dozenos.utils.process import is_systemd_service_running
+from dozenos.utils.file import read_file
 from dozenos.vpp.config_deps import deps_bond_dict
+from dozenos.vpp.config_resource_checks.memory import no_multi_seg_fits
 from dozenos.vpp.config_verify import verify_vpp_remove_interface
 from dozenos.vpp.config_verify import verify_vpp_mac_change_supported
 from dozenos.vpp.control_vpp import VPPControl
@@ -141,6 +145,51 @@ def update_bond_options(conf: Config, eth_conf: dict) -> list:
     eth_conf['bond_blocked_changes'] = blocked_list
     return None
 
+def _vpp_no_multi_seg_change(conf: Config) -> bool:
+    """Whether VPP must be reconfigured to flip 'no-multi-seg' (T9146)
+
+    True only when the flag the current config requires differs from the one VPP
+    is running with
+    """
+    # VPP is down: nothing to reconfigure now; the flag is recomputed the next
+    # time vpp.py runs (a 'vpp' commit or boot).
+    if not is_systemd_service_running('vpp.service'):
+        return False
+
+    # Largest MTU across all VPP-bound interfaces - the flag depends on the max,
+    # not just the interface being changed, so a change that leaves a bigger
+    # interface in place does not needlessly flip it.
+    vpp_ifaces = conf.list_nodes(['vpp', 'settings', 'interface'], default=[])
+    max_mtu = max(
+        (
+            int(conf.return_value(['interfaces', 'ethernet', iface, 'mtu']) or 1500)
+            for iface in vpp_ifaces
+        ),
+        default=1500,
+    )
+    # buffer data-size (default 2048) that the frame must fit under 'no-multi-seg'
+    data_size = int(
+        conf.return_value(
+            ['vpp', 'settings', 'resource-allocation', 'buffers', 'data-size']
+        )
+        or 2048
+    )
+    # what the new config requires after MTU change
+    desired = no_multi_seg_fits(max_mtu, data_size)
+
+    # read the flag VPP is actually running with from its generated startup.conf
+    try:
+        current = 'no-multi-seg' in read_file('/run/vpp/vpp.conf')
+    except OSError:
+        # Running state unknown: reconfigure only when 'no-multi-seg' must be
+        # off (an oversized frame would drop otherwise). When it should be on,
+        # multi-seg is a safe fallback, so skip the restart.
+        return not desired
+
+    # reconfigure VPP only when the flag actually flips
+    return current != desired
+
+
 def get_config(config=None):
     """
     Retrieve CLI config as dictionary. Dictionary can never be empty, as at least the
@@ -226,6 +275,14 @@ def get_config(config=None):
     # Check vrf membership, to ensure firewall is updated
     if is_vrf_changed(conf, ifname):
         set_dependents('firewall', conf)
+
+    # T9146: An MTU change on a VPP-bound interface can flip 'no-multi-seg';
+    # reconfigure VPP only when it actually flips. An initial dependency is
+    # used because a normal ethernet -> vpp one would cycle with the existing
+    # vpp -> ethernet dependency.
+    if vpp_config and is_node_changed(conf, base + [ifname, 'mtu']):
+        if _vpp_no_multi_seg_change(conf):
+            set_dependents_initial('vpp', conf)
 
     return ethernet
 
@@ -477,6 +534,7 @@ def apply(ethernet):
 
     # run the dependents
     call_dependents()
+    call_dependents_initial()
 
     vpp_iface_config = dict_search(f'vpp.settings.interface.{ifname}', ethernet)
     if vpp_iface_config is not None and is_systemd_service_running('vpp.service'):

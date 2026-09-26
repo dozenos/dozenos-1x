@@ -95,6 +95,11 @@ class Interface(Control):
         'eternal': '',
     }
 
+    # T9060: Interfaces negotiating their IPv6 interface identifier with the
+    # remote end - PPP links via IPV6CP (RFC 5072) - must not receive an
+    # additional EUI-64 derived link-local address unknown to the peer.
+    _ipv6_default_link_local = True
+
     _command_get = {
         'admin_state': {
             'shellcmd': 'ip -json link show dev {ifname}',
@@ -984,7 +989,8 @@ class Interface(Control):
         with the given prefix to the interface.
         """
         # T2863: only add a link-local IPv6 address if the interface returns
-        # a MAC address. This is not the case on e.g. WireGuard interfaces.
+        # a MAC address. Interface types without one either provide a
+        # synthetic MAC or opt out via _ipv6_default_link_local.
         mac = self.get_mac()
         if mac:
             eui64 = mac2eui64(mac, prefix)
@@ -2012,7 +2018,8 @@ class Interface(Control):
             self.del_ipv6_eui64_address(addr)
 
         # Manage IPv6 link-local addresses
-        if dict_search('ipv6.address.no_default_link_local', config) != None:
+        if (not self._ipv6_default_link_local or
+                dict_search('ipv6.address.no_default_link_local', config) != None):
             self.del_ipv6_eui64_address(link_local_prefix)
         else:
             self.add_ipv6_eui64_address(link_local_prefix)
