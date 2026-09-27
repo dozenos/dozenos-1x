@@ -75,7 +75,7 @@ def get_nftables_details(family, hook, priority):
 
     try:
         results = cmdl(command)
-    except:
+    except (OSError, UnicodeDecodeError):
         return {}
 
     out = {}
@@ -113,7 +113,7 @@ def get_nftables_state_details(family):
     command = ['nft', 'list', 'chain', suffix, 'dozenos_filter', f'DOZENOS_STATE_{name_suffix}']
     try:
         results = cmdl(command)
-    except:
+    except (OSError, UnicodeDecodeError):
         return {}
 
     out = {}
@@ -136,7 +136,7 @@ def get_nftables_group_members(family, table, name):
     try:
         results_str = cmdl(['nft', '-j', 'list', 'set', prefix, table, name])
         results = json.loads(results_str)
-    except:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return out
 
     if 'nftables' not in results:
@@ -164,7 +164,7 @@ def get_nftables_remote_group_members(family, table, name):
     try:
         results_str = cmdl(['nft', '-j', 'list', 'set', prefix, table, name])
         results = json.loads(results_str)
-    except:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return out
 
     if 'nftables' not in results:
