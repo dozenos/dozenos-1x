@@ -18,6 +18,8 @@ from dozenos.ifconfig.interface import Interface
 from dozenos.template import is_ipv6
 from dozenos.utils.assertion import assert_range
 from dozenos.utils.dict import dict_search
+from dozenos.utils.process import cmdl
+from dozenos.utils.process import get_wrapper
 from dozenos.utils.network import get_interface_config
 from dozenos.utils.network import mac2eui64
 
@@ -157,6 +159,14 @@ class PPPoEIf(Interface):
             if 'ipv6' in config:
                 self._cmdl(['vtysh', '-c', 'conf t'] + vrf + ['-c', f'ipv6 route ::/0 {self.ifname} tag 210 {distance}'])
 
-        # kick RS when IPv6 is up.
+        # Kick a Router Solicitation when IPv6 is up. This is best effort -
+        # the peer may answer late or not at all
         if dict_search('ipv6.address.autoconf', config) is not None:
-            self._cmdl(['rdisc6', '--single', '--retry', '3', self.ifname])
+            # systemd-run(1) only asks PID 1 to start the transient unit, so
+            # rdisc6(8) does not inherit our VRF context - it has to be entered
+            # inside the unit itself
+            wrapper = get_wrapper(config['vrf'] if 'vrf' in config else None, None)
+            description = f'DozenOS IPv6 Router Solicitation on {self.ifname}'
+            cmdl(['systemd-run', '--quiet', '--collect',
+                  f'--description={description}'] + wrapper +
+                 ['rdisc6', '--single', '--retry', '3', self.ifname], self.debug)

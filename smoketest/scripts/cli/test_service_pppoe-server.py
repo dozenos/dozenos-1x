@@ -22,6 +22,7 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from configparser import ConfigParser
 from dozenos.utils.file import read_file
+from dozenos.utils.process import is_systemd_service_running
 from dozenos.template import range_to_regex
 from dozenos.configsession import ConfigSessionError
 
@@ -197,6 +198,15 @@ class TestServicePPPoEServer(BasicAccelPPPTest.TestCase):
         # Validate configuration values
         config = read_file(self._config_file)
         self.assertIn('any-login=1', config)
+
+        # T9357: "any-login" accepts any username/password combination, thus
+        # local users are not required to be configured at all
+        self.delete(['authentication', 'local-users'])
+        self.cli_commit()
+
+        config = read_file(self._config_file)
+        self.assertIn('any-login=1', config)
+        self.assertTrue(is_systemd_service_running('accel-ppp@pppoe.service'))
 
     def test_pppoe_server_accept_service(self):
         services = ['user1-service', 'user2-service']

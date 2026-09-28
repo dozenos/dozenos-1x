@@ -50,6 +50,7 @@ neighbor_config = {
         'cap_dynamic'      : '',
         'cap_ext_next'     : '',
         'cap_ext_sver'     : '',
+        'orf_send'         : '',
         'remote_as'        : '100',
         'adv_interv'       : '400',
         'passive'          : '',
@@ -71,6 +72,7 @@ neighbor_config = {
         'no_cap_nego'      : '',
         'port'             : '667',
         'cap_strict'       : '',
+        'orf_receive'      : '',
         'advertise_map'    : route_map_in,
         'non_exist_map'    : route_map_out,
         'pfx_list_in'      : prefix_list_in,
@@ -95,6 +97,8 @@ neighbor_config = {
         'cap_dynamic'      : '',
         'cap_ext_next'     : '',
         'cap_ext_sver'     : '',
+        'orf_send'         : '',
+        'orf_receive'      : '',
         'remote_as'        : '123',
         'adv_interv'       : '400',
         'passive'          : '',
@@ -143,6 +147,7 @@ peer_group_config = {
         'p_attr_discard'   : ['100', '150', '200'],
         },
     'bar' : {
+        'orf_send'         : '',
         'remote_as'        : 'auto',
         'graceful_rst_no'  : '',
         'port'             : '667',
@@ -151,6 +156,7 @@ peer_group_config = {
     'foo-bar' : {
         'advertise_map'    : route_map_in,
         'description'      : 'foo peer bar group',
+        'orf_receive'      : '',
         'remote_as'        : '200',
         'shutdown'         : '',
         'no_cap_nego'      : '',
@@ -165,6 +171,8 @@ peer_group_config = {
         'bfd_profile'      : bfd_profile,
         'cap_dynamic'      : '',
         'cap_ext_next'     : '',
+        'orf_send'         : '',
+        'orf_receive'      : '',
         'remote_as'        : '200',
         'passive'          : '',
         'multi_hop'        : '5',
@@ -250,6 +258,18 @@ class TestProtocolsBGP(DozenOSUnitTestSHIM.TestCase):
             self.assertIn(f' neighbor {peer} capability extended-nexthop', frrconfig)
         if 'cap_ext_sver' in peer_config:
             self.assertIn(f' neighbor {peer} capability software-version', frrconfig)
+        # FRR collapses an enabled send and receive ORF capability into a
+        # single "both" statement - the template must do the very same
+        if 'orf_send' in peer_config and 'orf_receive' in peer_config:
+            self.assertIn(f' neighbor {peer} capability orf prefix-list both', frrconfig)
+            self.assertNotIn(f' neighbor {peer} capability orf prefix-list send', frrconfig)
+            self.assertNotIn(f' neighbor {peer} capability orf prefix-list receive', frrconfig)
+        elif 'orf_send' in peer_config:
+            self.assertIn(f' neighbor {peer} capability orf prefix-list send', frrconfig)
+            self.assertNotIn(f' neighbor {peer} capability orf prefix-list both', frrconfig)
+        elif 'orf_receive' in peer_config:
+            self.assertIn(f' neighbor {peer} capability orf prefix-list receive', frrconfig)
+            self.assertNotIn(f' neighbor {peer} capability orf prefix-list both', frrconfig)
         if 'description' in peer_config:
             self.assertIn(f' neighbor {peer} description {peer_config["description"]}', frrconfig)
         if 'no_cap_nego' in peer_config:
@@ -476,6 +496,10 @@ class TestProtocolsBGP(DozenOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['neighbor', peer, 'capability', 'extended-nexthop'])
             if 'cap_ext_sver' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'capability', 'software-version'])
+            if 'orf_send' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'capability', 'orf', 'prefix-list', 'send'])
+            if 'orf_receive' in peer_config:
+                self.cli_set(base_path + ['neighbor', peer, 'address-family', afi, 'capability', 'orf', 'prefix-list', 'receive'])
             if 'description' in peer_config:
                 self.cli_set(base_path + ['neighbor', peer, 'description', peer_config["description"]])
             if 'no_cap_nego' in peer_config:
@@ -581,6 +605,10 @@ class TestProtocolsBGP(DozenOSUnitTestSHIM.TestCase):
                 self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'extended-nexthop'])
             if 'cap_ext_sver' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'capability', 'software-version'])
+            if 'orf_send' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'capability', 'orf', 'prefix-list', 'send'])
+            if 'orf_receive' in config:
+                self.cli_set(base_path + ['peer-group', peer_group, 'address-family', 'ipv4-unicast', 'capability', 'orf', 'prefix-list', 'receive'])
             if 'description' in config:
                 self.cli_set(base_path + ['peer-group', peer_group, 'description', config["description"]])
             if 'no_cap_nego' in config:

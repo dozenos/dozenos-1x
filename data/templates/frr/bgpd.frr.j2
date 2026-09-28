@@ -205,10 +205,11 @@
 {%         if afi_config.attribute_unchanged is dozenos_defined %}
   neighbor {{ neighbor }} attribute-unchanged {{ 'as-path ' if afi_config.attribute_unchanged.as_path is dozenos_defined }}{{ 'med ' if afi_config.attribute_unchanged.med is dozenos_defined }}{{ 'next-hop ' if afi_config.attribute_unchanged.next_hop is dozenos_defined }}
 {%         endif %}
-{%         if afi_config.capability.orf.prefix_list.send is dozenos_defined %}
+{%         if afi_config.capability.orf.prefix_list.send is dozenos_defined and afi_config.capability.orf.prefix_list.receive is dozenos_defined %}
+  neighbor {{ neighbor }} capability orf prefix-list both
+{%         elif afi_config.capability.orf.prefix_list.send is dozenos_defined %}
   neighbor {{ neighbor }} capability orf prefix-list send
-{%         endif %}
-{%         if afi_config.capability.orf.prefix_list.receive is dozenos_defined %}
+{%         elif afi_config.capability.orf.prefix_list.receive is dozenos_defined %}
   neighbor {{ neighbor }} capability orf prefix-list receive
 {%         endif %}
 {%         if afi_config.default_originate is dozenos_defined %}

@@ -34,7 +34,7 @@ from dozenos.utils.process import is_systemd_service_running
 from dozenos.utils.file import read_file
 from dozenos.pki import create_certificate
 from dozenos.pki import create_certificate_request
-from dozenos.pki import create_private_key
+from dozenos.pki import create_ec_private_key
 from dozenos.pki import encode_certificate
 from dozenos.pki import encode_private_key
 from dozenos.utils.network import get_interface_config
@@ -100,7 +100,7 @@ def generate_pki():
         'organization': 'DozenOS',
         'common_name': 'DozenOS Test',
     }
-    key = create_private_key('ec', 256)
+    key = create_ec_private_key(256)
     request = create_certificate_request(subject, key)
     # is_ca gives it both CLIENT_AUTH and SERVER_AUTH, so one certificate
     # serves either end of a tunnel
