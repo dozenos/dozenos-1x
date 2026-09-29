@@ -2110,5 +2110,22 @@ class TestProtocolsBGP(DozenOSUnitTestSHIM.TestCase):
 
         self.cli_delete(['policy', 'prefix-list', broken_prefix_list])
 
+    def test_bgp_106_interface_l3vpn_multi_domain_switching(self):
+        interfaces = Section.interfaces('ethernet', vlan=False)
+        for interface in interfaces:
+            self.cli_set(
+                base_path
+                + ['interface', interface, 'mpls', 'l3vpn-multi-domain-switching']
+            )
+
+        self.cli_commit()
+
+        for interface in interfaces:
+            frrconfig = self.getFRRconfig(
+                f'interface {interface}', stop_section='^exit'
+            )
+            self.assertIn(f'interface {interface}', frrconfig)
+            self.assertIn(f' mpls bgp l3vpn-multi-domain-switching', frrconfig)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())

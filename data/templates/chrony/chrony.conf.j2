@@ -42,7 +42,16 @@ user {{ user }}
 {%         if config.pool is dozenos_defined %}
 {%             set association = 'pool' %}
 {%         endif %}
-{{ association }} {{ server | replace('_', '-') }} iburst {{- ' nts' if config.nts is dozenos_defined }} {{- ' noselect' if config.noselect is dozenos_defined }} {{- ' prefer' if config.prefer is dozenos_defined }} {{- ' xleave' if config.interleave is dozenos_defined }} {{- ' port ' ~ ptp.port if ptp.port is dozenos_defined and config.ptp is dozenos_defined }}
+{{ association }} {{ server | replace('_', '-') }} iburst
+  {{- ' nts' if config.nts is dozenos_defined }}
+  {{- ' noselect' if config.noselect is dozenos_defined }}
+  {{- ' prefer' if config.prefer is dozenos_defined }}
+  {{- ' xleave' if config.interleave is dozenos_defined }}
+  {{- ' port ' ~ ptp.port if ptp.port is dozenos_defined and config.ptp is dozenos_defined }}
+  {{- ' minpoll ' ~ config.minpoll if config.minpoll is dozenos_defined }}
+  {{- ' maxpoll ' ~ config.maxpoll if config.maxpoll is dozenos_defined }}
+  {{- ' presend ' ~ config.presend if config.presend is dozenos_defined }}
+  {{- ' extfield F323' if config.extfield_f323 is dozenos_defined }}
 {%     endfor %}
 {% endif %}
 
