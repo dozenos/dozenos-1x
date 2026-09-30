@@ -939,6 +939,50 @@ class TestInterfacesOpenVPN(DozenOSUnitTestSHIM.TestCase):
             interface = f'vtun{ii}'
             self.assertNotIn(interface, interfaces())
 
+    def test_openvpn_missing_shared_secret_references(self):
+        interface = 'vtun5099'
+        path = base_path + [interface]
+        missing_key = 'NONEXISTENT'
+        pki_key_path = ['pki', 'openvpn', 'shared-secret', 'ovpn_test']
+
+        self.cli_delete(pki_key_path)
+
+        self.cli_set(path + ['mode', 'server'])
+        self.cli_set(path + ['server', 'subnet', '10.20.30.0/24'])
+        self.cli_set(path + ['tls', 'ca-certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'certificate', 'ovpn_test'])
+        self.cli_set(path + ['tls', 'dh-params', 'ovpn_test'])
+
+        self.cli_set(path + ['tls', 'auth-key', missing_key])
+        with self.assertRaisesRegex(
+            ConfigSessionError,
+            rf'Invalid "tls auth-key" value "{missing_key}" on OpenVPN interface\s+{interface}',
+        ):
+            self.cli_commit()
+
+        self.cli_delete(path + ['tls', 'auth-key'])
+        self.cli_set(path + ['tls', 'crypt-key', missing_key])
+        with self.assertRaisesRegex(
+            ConfigSessionError,
+            rf'Invalid "tls crypt-key" value "{missing_key}" on OpenVPN interface\s+{interface}',
+        ):
+            self.cli_commit()
+
+        self.cli_delete(path + ['tls'])
+        self.cli_delete(path + ['server'])
+        self.cli_set(path + ['mode', 'site-to-site'])
+        self.cli_set(path + ['local-address', '10.0.0.1'])
+        self.cli_set(path + ['remote-address', '10.0.0.2'])
+        self.cli_set(path + ['encryption', 'cipher', 'aes256'])
+        self.cli_set(path + ['shared-secret-key', missing_key])
+        with self.assertRaisesRegex(
+            ConfigSessionError,
+            rf'Invalid "shared-secret-key" value "{missing_key}" on OpenVPN interface\s+{interface}',
+        ):
+            self.cli_commit()
+
+        self.cli_set(pki_key_path + ['key'], ovpn_key_data.replace('\n', ''))
+
     def test_openvpn_server_ip_version(self):
         # Test the server mode behavior combined with each IP protocol version
 
@@ -1338,7 +1382,8 @@ class TestInterfacesOpenVPN(DozenOSUnitTestSHIM.TestCase):
         self.assertNotIn('ping-restart', directives)
         self.assertServiceRunning(interface)
 
-        # an enabled keepalive still renders both
+        # an enabled keepalive renders both, and the timeout is the interval
+        # times the number of failures it tolerates
         self.cli_set(path + ['keep-alive', 'interval', '10'])
         self.cli_set(path + ['keep-alive', 'failure-count', '60'])
         self.cli_commit()
@@ -1348,8 +1393,33 @@ class TestInterfacesOpenVPN(DozenOSUnitTestSHIM.TestCase):
         config = read_file(f'/run/openvpn/{interface}.conf')
         lines = config.splitlines()
         self.assertIn('ping 10', lines)
-        self.assertIn('ping-restart 60', lines)
+        self.assertIn('ping-restart 600', lines)
         self.assertServiceRunning(interface)
+
+        # check validate() - OpenVPN caps ping-restart at 24 hours, and
+        # nothing doubles the value here the way it does for the server
+        self.cli_set(path + ['keep-alive', 'interval', '600'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '145'])
+        with self.assertRaisesRegex(ConfigSessionError, r'cannot\s+exceed\s+86400'):
+            self.cli_commit()
+
+        # 600 * 144 is exactly 24 hours, which OpenVPN still accepts
+        self.cli_set(path + ['keep-alive', 'failure-count', '144'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping-restart 86400', config.splitlines())
+        self.assertServiceRunning(interface)
+
+        # a failure-count below 2 is deliberately allowed here, unlike the
+        # server: it renders "ping-restart 10", a working "restart after one
+        # missed ping"
+        self.cli_set(path + ['keep-alive', 'interval', '10'])
+        self.cli_set(path + ['keep-alive', 'failure-count', '1'])
+        self.cli_commit()
+
+        config = read_file(f'/run/openvpn/{interface}.conf')
+        self.assertIn('ping-restart 10', config.splitlines())
 
         self.cli_delete(base_path)
         self.cli_commit()
