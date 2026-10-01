@@ -52,6 +52,9 @@ compress lzo
 {% if offload.dco is not dozenos_defined %}
 disable-dco
 {% endif %}
+{% if tun_mtu is dozenos_defined %}
+tun-mtu {{ tun_mtu }}
+{% endif %}
 
 {% if mode is dozenos_defined('client') %}
 #
