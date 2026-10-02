@@ -19,6 +19,7 @@ from pathlib import Path
 from dozenos.defaults import reference_tree_cache
 from dozenos.configtree import LIBPATH
 from dozenos.configtree import get_lib
+from dozenos.configtree import check_path
 
 
 class ReferenceTreeError(Exception):
@@ -62,6 +63,13 @@ class ReferenceTree:
 
     def to_json(self):
         return self.__lib.to_json_reference_tree(self.__pointer).decode()
+
+    def exists(self, path):
+        check_path(path)
+        path_str = ' '.join(map(str, path)).encode()
+
+        res = self.__lib.exists(self.__pointer, path_str)
+        return bool(res)
 
     def get_owner(self, path):
         return self.__lib.get_owner(self.__pointer, path.encode()).decode()
