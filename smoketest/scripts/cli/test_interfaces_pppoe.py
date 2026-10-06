@@ -407,6 +407,13 @@ class PPPoEInterfaceTest(DozenOSUnitTestSHIM.TestCase):
         self.cli_delete(pppoe_server_path + ['default-ipv6-pool'])
         self.cli_commit()
 
+        # Restore the BRAS IPv6 pool for the remaining tests - also when this
+        # test fails. Cleanups run after tearDown(), so all clients are gone
+        def restore_ipv6_pool():
+            self.cli_set(pppoe_server_path + ['default-ipv6-pool', 'IPv6-POOL'])
+            self.cli_commit()
+        self.addCleanup(restore_ipv6_pool)
+
         for interface in self._interfaces:
             (user, passwd) = self.u_p_dict[interface]
 
@@ -422,8 +429,10 @@ class PPPoEInterfaceTest(DozenOSUnitTestSHIM.TestCase):
             self.assertTrue(wait_for_interface(interface),
                             msg=f'Interface {interface} not found after {connect_timeout} seconds!')
 
-            # The BRAS has no IPv6 to offer, so the link carries none
-            self.assertFalse(get_interface_addresses(interface, 'inet6'))
+            # The BRAS has no IPv6 to offer, so the link carries no global
+            # address. IPV6CP is still negotiated, thus a link-local address
+            # may show up at any time
+            self.assertFalse(has_global_ipv6_address(interface))
 
         # Changing an option that does not require a reconnect updates the
         # established session in the very commit that changes it - this is
@@ -440,10 +449,6 @@ class PPPoEInterfaceTest(DozenOSUnitTestSHIM.TestCase):
         for process in process_iter(['name', 'ppid']):
             if process.info['name'] == 'rdisc6':
                 self.assertEqual(process.info['ppid'], 1)
-
-        # Restore the BRAS IPv6 pool for the remaining tests
-        self.cli_set(pppoe_server_path + ['default-ipv6-pool', 'IPv6-POOL'])
-        self.cli_commit()
 
     def test_pppoe_options(self):
         # Verify access-concentrator and service-name CLI options
@@ -538,6 +543,8 @@ class PPPoEInterfaceTest(DozenOSUnitTestSHIM.TestCase):
         # T6991/T9054: The PPPoE default route must not be withdrawn from FRR
         # when "protocols static" is deleted - only the statically configured
         # routes must disappear, the PPPoE-sourced default route must stay.
+        # Both IPv4 and IPv6 default routes are rendered by dozenos.frrender, so
+        # they also survive any other FRR re-render.
         interface = self._interfaces[0]
         (user, passwd) = self.u_p_dict[interface]
         static_base_path = ['protocols', 'static']
@@ -545,14 +552,17 @@ class PPPoEInterfaceTest(DozenOSUnitTestSHIM.TestCase):
         self.cli_set(base_path + [interface, 'authentication', 'username', user])
         self.cli_set(base_path + [interface, 'authentication', 'password', passwd])
         self.cli_set(base_path + [interface, 'source-interface', self._source_interface])
+        self.cli_set(base_path + [interface, 'ipv6', 'address', 'autoconf'])
         self.cli_commit()
 
         self.assertTrue(wait_for_interface(interface),
                         msg=f'Interface {interface} not found after {connect_timeout} seconds!')
 
         default_route = rf'ip route 0.0.0.0/0 {interface} tag 210'
+        default_route6 = rf'ipv6 route ::/0 {interface} tag 210'
         frrconfig = self.getFRRconfig('')
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
 
         # Add an unrelated static route - this is what triggers "protocols
         # static" to exist on the CLI in the first place
@@ -561,6 +571,7 @@ class PPPoEInterfaceTest(DozenOSUnitTestSHIM.TestCase):
 
         frrconfig = self.getFRRconfig('')
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
         self.assertIn(r'ip route 10.0.0.0/8 blackhole', frrconfig)
 
         # Now delete "protocols static" entirely - the PPPoE default route
@@ -571,6 +582,15 @@ class PPPoEInterfaceTest(DozenOSUnitTestSHIM.TestCase):
         frrconfig = self.getFRRconfig('')
         self.assertNotIn(r'ip route 10.0.0.0/8 blackhole', frrconfig)
         self.assertIn(default_route, frrconfig)
+        self.assertIn(default_route6, frrconfig)
+
+        # Deleting the PPPoE interface withdraws both default routes
+        self.cli_delete(base_path + [interface])
+        self.cli_commit()
+
+        frrconfig = self.getFRRconfig('')
+        self.assertNotIn(default_route, frrconfig)
+        self.assertNotIn(default_route6, frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())

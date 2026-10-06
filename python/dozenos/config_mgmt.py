@@ -28,6 +28,7 @@ from textwrap import dedent
 from pathlib import Path
 from shutil import copy, chown
 from subprocess import Popen
+from subprocess import PIPE
 from subprocess import DEVNULL
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
@@ -46,11 +47,14 @@ from dozenos.version import get_full_version_data
 from dozenos.utils.io import ask_yes_no
 from dozenos.utils.io import catch_broken_pipe
 from dozenos.utils.boot import boot_configuration_complete
+from dozenos.utils.backend import vyconf_backend
 from dozenos.utils.process import is_systemd_service_active
 from dozenos.utils.process import rc_cmd
 from dozenos.defaults import DEFAULT_COMMIT_CONFIRM_MINUTES
 from dozenos.component_version import append_system_version
+from dozenos.component_version import add_system_version_string
 from dozenos.utils.file import file_compare
+from dozenos.utils.file import write_file
 
 SAVE_CONFIG = '/usr/libexec/dozenos/dozenos-save-config.py'
 config_json = '/run/vyatta/config/config.json'
@@ -626,7 +630,7 @@ Proceed ?"""
         cmp_saved = f'/tmp/config.boot.{ext}'
 
         if boot_configuration_complete():
-            save_config(cmp_saved, json_out=config_json)
+            self._save_active_config(cmp_saved)
         else:
             copy(config_file, cmp_saved)
 
@@ -657,6 +661,26 @@ Proceed ?"""
             return False
 
         return True
+
+    def _save_active_config(self, target):
+        """Write the active config and its JSON the way dozenos-save-config.py
+        does, from the tree this object already holds: running that script
+        built a second full Config() for the same content."""
+        ct = self.active_config
+        if ct is None:
+            save_config(target, json_out=config_json)
+            return
+        try:
+            write_file(target, add_system_version_string(ct.to_string()))
+        except OSError as e:
+            # as save_config() does when dozenos-save-config.py fails
+            logger.critical(f'save config failed: {e}')
+            return
+        try:
+            with open(config_json, 'w') as f:
+                f.write(ct.to_json())
+        except OSError as e:
+            logger.warning(f'cannot write {config_json}: {e}')
 
     @staticmethod
     def _update_archive():
@@ -803,22 +827,62 @@ Proceed ?"""
         os.umask(mask)
 
 
+def _committed_config():
+    """Config for the post-commit hooks.
+
+    The hooks run after the commit has written the active config, so the
+    working config is the same tree. Read it once, from the active store.
+    Config() reads it twice, and its working-config read goes through the
+    session's unionfs-fuse, which takes seconds on a large config.
+    """
+    from dozenos.configsource import ConfigSourceString
+
+    # after a failed or partial commit read the config the stock way (full
+    # Config()): a faster read here lets a scripted discard + set land inside
+    # vyatta-cfg's unionfs-fuse cache window after discard, where the set fails
+    if os.environ.get('COMMIT_STATUS', 'SUCCESS') != 'SUCCESS':
+        return None
+
+    # with the vyconf backend Config() reads the vyconf session, not the
+    # legacy store: keep that path
+    if vyconf_backend() and boot_configuration_complete():
+        return None
+
+    # read stdout only, unmodified, as ConfigSourceSession does
+    p = Popen(['/bin/cli-shell-api', '--show-active-only', '--show-show-defaults',
+               '--show-ignore-edit', 'showConfig'], stdout=PIPE)
+    text = p.communicate()[0].decode()
+    if p.returncode != 0 or not text:
+        return None
+    # as ConfigSourceSession: no running config until the boot config is
+    # loaded, so the boot commit's hooks see no effective values (and do not
+    # upload the archive)
+    running = text if boot_configuration_complete() else ''
+    return Config(config_source=ConfigSourceString(running_config_text=running,
+                                                   session_config_text=text))
+
+
 # entry_point for console script
 #
 @catch_broken_pipe
 def run():
     from argparse import ArgumentParser, REMAINDER
 
-    config_mgmt = ConfigMgmt()
-
     for s in list(commit_hooks):
         if sys.argv[0].replace('-', '_').endswith(s):
+            try:
+                config = _committed_config()
+            except Exception:  # pylint: disable=broad-exception-caught
+                config = None  # ConfigMgmt() falls back to a full Config()
+            config_mgmt = ConfigMgmt(config=config)
             func = getattr(config_mgmt, s)
             try:
                 func()
             except Exception as e:
                 print(f'{s}: {e}')
             sys.exit(0)
+
+    config_mgmt = ConfigMgmt()
 
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(dest='subcommand')

@@ -35,7 +35,6 @@ from dozenos.defaults import frr_debug_enable
 from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_set_nested
 from dozenos.utils.file import write_file
-from dozenos.utils.process import cmdl
 from dozenos.utils.process import rc_cmd
 from dozenos.template import get_dhcp_router
 from dozenos.template import render_to_string
@@ -929,5 +928,10 @@ class FRRender:
         if count >= count_max:
             raise ConfigError(emsg)
 
-        # T3217: Save FRR configuration to /run/frr/config/frr.conf
-        return cmdl(['/usr/bin/vtysh', '-n', '--writeconfig'])
+        # frr-reload.py --reload has already saved the configuration to
+        # /etc/frr/frr.conf (bind-mounted from /run/frr/config/frr.conf): it
+        # does so whenever it is not run with --daemon. T3217 added a second
+        # save here when DozenOS still reloaded one daemon at a time with
+        # --daemon. Repeating it asks every daemon for its configuration once
+        # more, and a bgpd busy with a policy walk then holds the commit until
+        # the walk ends.
