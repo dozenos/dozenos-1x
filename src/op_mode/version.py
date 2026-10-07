@@ -28,6 +28,7 @@ import dozenos.limericks
 
 from dozenos.utils.boot import is_uefi_system
 from dozenos.system.image import is_running_as_container
+from dozenos.utils.system import get_secure_boot_certificates
 from dozenos.utils.system import get_secure_boot_state
 
 from jinja2 import Template
@@ -63,6 +64,13 @@ Copyright:        VyOS maintainers and contributors
 {% endif -%}
 """
 
+def _get_secure_boot_detail():
+    """ Return issuer and subject of the running Kernel image signature
+    certificates as "issuer, subject" - multiple signatures are delimited by
+    "; ". Returns None if no signature could be read. """
+    certificates = get_secure_boot_certificates()
+    return '; '.join(f'{c["issuer"]}, {c["subject"]}' for c in certificates) or None
+
 def _get_raw_data(funny=False):
     version_data = dozenos.version.get_full_version_data()
     # A container has no firmware of its own - it is not booted at all, thus
@@ -75,6 +83,9 @@ def _get_raw_data(funny=False):
             version_data["secure_boot"] = "disabled"
             if get_secure_boot_state():
                 version_data["secure_boot"] = "enabled"
+                detail = _get_secure_boot_detail()
+                if detail:
+                    version_data["secure_boot_detail"] = detail
 
     if funny:
         version_data["limerick"] = dozenos.limericks.get_random()

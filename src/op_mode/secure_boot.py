@@ -19,6 +19,7 @@ import sys
 import dozenos.opmode
 
 from dozenos.utils.boot import is_uefi_system
+from dozenos.utils.system import get_secure_boot_certificates
 from dozenos.utils.system import get_secure_boot_state
 
 def _get_raw_data(name=None):
@@ -40,6 +41,26 @@ def show(raw: bool):
         return sb_data
     else:
         return _get_formatted_output(sb_data)
+
+def _get_formatted_detail(certificates):
+    out = []
+    for certificate in certificates:
+        out.append(f'Issuer:  {certificate["issuer"]}')
+        out.append(f'Subject: {certificate["subject"]}')
+    return '\n'.join(out)
+
+def show_detail(raw: bool):
+    if not get_secure_boot_state():
+        raise dozenos.opmode.UnsupportedOperation('SecureBoot disabled')
+
+    certificates = get_secure_boot_certificates()
+    if not certificates:
+        raise dozenos.opmode.DataUnavailable('No Linux Kernel signature certificate found')
+
+    if raw:
+        return certificates
+    else:
+        return _get_formatted_detail(certificates)
 
 if __name__ == "__main__":
     try:
