@@ -27,6 +27,7 @@ from sys import exit
 from dozenos.configquery import ConfigTreeQuery
 from dozenos.configdict import get_interface_dict
 from dozenos.ifconfig import PPPoEIf
+from dozenos.utils.commit import wait_for_commit_lock
 
 # When the ppp link comes up, this script is called with the following
 # parameters
@@ -41,6 +42,12 @@ if (len(argv) < 7):
     exit(1)
 
 interface = argv[6]
+
+# The session is re-established from within a commit and can come back up
+# before that commit finished. The configuration read below is the running
+# one, which until then still is the configuration from before the commit -
+# applying it would undo what is being committed right now
+wait_for_commit_lock()
 
 conf = ConfigTreeQuery()
 _, pppoe = get_interface_dict(conf.config, ['interfaces', 'pppoe'], interface)

@@ -29,6 +29,7 @@ fi
 # - RELEASE: lease released, remove routes
 # - STOP: dhclient stopped, remove routes
 if [ "$reason" == "PREINIT" ] || [ "$reason" == "EXPIRE" ] || [ "$reason" == "FAIL" ] || [ "$reason" == "RELEASE" ] || [ "$reason" == "STOP" ]; then
-    # Re-generate static routes config to remove routes that depend on this interface
-    sudo /usr/libexec/dozenos/dozenos-request-configd-update.py
+    # Reconcile the rendered FRR configuration - routes depending on this
+    # interface must be removed
+    sudo /usr/libexec/dozenos/dozenos-frr-render.py
 fi

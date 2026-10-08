@@ -22,8 +22,10 @@ frr-reload.py, if the configuration has no errors.
 Will fail early if the rendered configuration has any errors.
 """
 
+import fcntl
 import os
 
+from contextlib import contextmanager
 from copy import deepcopy
 from time import sleep
 
@@ -34,6 +36,7 @@ from dozenos.configdict import get_pppoe_interfaces
 from dozenos.defaults import frr_debug_enable
 from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_set_nested
+from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
 from dozenos.utils.process import rc_cmd
 from dozenos.template import get_dhcp_router
@@ -44,6 +47,21 @@ def debug(message):
     if not os.path.exists(frr_debug_enable):
         return
     print(message)
+
+frr_config_file: str = '/run/frr/config/dozenos.frr.conf'
+# Configuration of the last successful reload, for consumers which have no
+# cached configuration of their own
+frr_applied_config_file: str = '/run/frr/config/dozenos.frr.applied.conf'
+frr_render_lock_file: str = '/run/dozenos-frr-render.lock'
+
+@contextmanager
+def frr_render_lock():
+    """Serialize everything which renders FRR. The rendered configuration is a
+    single file handed to frr-reload.py, so a second renderer would rewrite it
+    while FRR is being reloaded from it."""
+    with open(frr_render_lock_file, 'w') as lock_file:
+        fcntl.lockf(lock_file, fcntl.LOCK_EX)
+        yield
 
 ERROR_RELOAD_TEST: str = 'The system encountered an error while rendering the ' \
     'new routing daemon configuration. To ensure network stability and avoid ' \
@@ -298,6 +316,12 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                                    no_tag_node_value_mangle=True,
                                    with_recursive_defaults=True)
         bgp['dependent_vrfs'] = {}
+        # The XML default of "parameters default local-pref" is added to the
+        # dict, the template cannot query it while rendering. Only the node
+        # "parameters default" is asked for, not the whole BGP tree.
+        tmp = conf.get_config_defaults(bgp_cli_path + ['parameters', 'default'],
+                                       key_mangling=('-', '_'), get_first_key=True)
+        bgp['xml_default_local_pref'] = tmp.get('local_pref')
         dict.update({'bgp' : bgp})
     elif conf.exists_effective(bgp_cli_path):
         dict.update({'bgp' : {'deleted' : '', 'dependent_vrfs' : {}}})
@@ -523,6 +547,8 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                 # merge in remaining default values
                 vrf_config['protocols']['bgp'] = config_dict_merge(default_values,
                                                                    vrf_config['protocols']['bgp'])
+                vrf_config['protocols']['bgp']['xml_default_local_pref'] = dict_search(
+                    'parameters.default.local_pref', default_values)
 
                 # Add this BGP VRF instance as dependency into the default VRF
                 if 'bgp' in dict:
@@ -740,7 +766,7 @@ class FRRender:
     cached_config_dict = {}
     cached_dhcp_gateways = {}
     def __init__(self):
-        self._frr_conf = '/run/frr/config/dozenos.frr.conf'
+        self._frr_conf = frr_config_file
 
     def generate(self, config_dict) -> None:
         """
@@ -927,6 +953,8 @@ class FRRender:
 
         if count >= count_max:
             raise ConfigError(emsg)
+
+        write_file(frr_applied_config_file, read_file(self._frr_conf))
 
         # frr-reload.py --reload has already saved the configuration to
         # /etc/frr/frr.conf (bind-mounted from /run/frr/config/frr.conf): it

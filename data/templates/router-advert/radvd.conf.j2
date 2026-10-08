@@ -24,6 +24,9 @@ interface {{ iface }} {
 {%         endif %}
     AdvIntervalOpt {{ 'off' if iface_config.no_send_interval is dozenos_defined else 'on' }};
     AdvSendAdvert {{ 'off' if iface_config.no_send_advert is dozenos_defined else 'on' }};
+{%         if iface_config.no_remove_on_exit is dozenos_defined %}
+    RemoveAdvOnExit off;
+{%         endif %}
 {%         if iface_config.default_lifetime is dozenos_defined %}
     AdvDefaultLifetime {{ iface_config.default_lifetime }};
 {%         endif %}
@@ -95,10 +98,16 @@ interface {{ iface }} {
 {%             if iface_config.name_server_lifetime is dozenos_defined %}
         AdvRDNSSLifetime {{ iface_config.name_server_lifetime }};
 {%             endif %}
+{%             if iface_config.no_flush_name_server is dozenos_defined %}
+        FlushRDNSS off;
+{%             endif %}
     };
 {%         endif %}
 {%         if iface_config.dnssl is dozenos_defined %}
     DNSSL {{ iface_config.dnssl | join(" ") }} {
+{%             if iface_config.no_flush_dnssl is dozenos_defined %}
+        FlushDNSSL off;
+{%             endif %}
     };
 {%         endif %}
 };

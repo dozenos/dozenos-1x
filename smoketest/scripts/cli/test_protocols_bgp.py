@@ -1806,6 +1806,12 @@ class TestProtocolsBGP(DozenOSUnitTestSHIM.TestCase):
         self.cli_set(
             base_path + ['address-family', 'ipv4-unicast', 'route-map',
                          'vrf', 'import',  route_map_in])
+        self.cli_set(
+            base_path + ['address-family', 'ipv6-unicast', 'import',
+                         'vrf', vrf])
+        self.cli_set(
+            base_path + ['address-family', 'ipv6-unicast', 'route-map',
+                         'vrf', 'import',  route_map_in])
 
         self.cli_commit()
 
@@ -1817,6 +1823,13 @@ class TestProtocolsBGP(DozenOSUnitTestSHIM.TestCase):
 
         self.assertIn(f'  import vrf {vrf}', frrconfig)
         self.assertIn(f'  import vrf route-map {route_map_in}', frrconfig)
+
+        # The same filter under IPv6 unicast
+        frr_ipv6 = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit',
+                                     start_subsection=' address-family ipv6 unicast',
+                                     stop_subsection='^ exit-address-family')
+        self.assertIn(f'  import vrf {vrf}', frr_ipv6)
+        self.assertIn(f'  import vrf route-map {route_map_in}', frr_ipv6)
 
         # Verify FRR bgpd configuration
         frr_vrf_config = self.getFRRconfig(
@@ -2126,6 +2139,127 @@ class TestProtocolsBGP(DozenOSUnitTestSHIM.TestCase):
             )
             self.assertIn(f'interface {interface}', frrconfig)
             self.assertIn(f' mpls bgp l3vpn-multi-domain-switching', frrconfig)
+
+    def test_bgp_107_default_local_pref_default_value(self):
+        # T9404: FRR does not print "bgp default local-preference 100" in its
+        # running config because 100 is the default. If we render the line
+        # anyway, frr-reload finds it missing on every reload and sends it
+        # again, and FRR runs "clear bgp * soft in" for each of those. So the
+        # default value must not be rendered.
+        #
+        # This reads the generated FRR config file instead of getFRRconfig():
+        # FRR never prints the line for 100, so vtysh cannot tell if we render it.
+        frr_conf = '/run/frr/config/dozenos.frr.conf'
+        local_pref = ' bgp default local-preference'
+
+        # the XML default (100) is always in the config dict, but it is the
+        # default, so nothing is rendered when local-pref is not configured
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(local_pref, frrconfig)
+
+        self.cli_set(base_path + ['parameters', 'default', 'local-pref', '100'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(local_pref, frrconfig)
+
+        # a value other than the default is still rendered and applied
+        self.cli_set(base_path + ['parameters', 'default', 'local-pref', '200'])
+        self.cli_commit()
+
+        self.assertIn(f'{local_pref} 200', read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(f'{local_pref} 200', frrconfig)
+
+        # back to the default value, FRR must have the default again
+        self.cli_set(base_path + ['parameters', 'default', 'local-pref', '100'])
+        self.cli_commit()
+
+        self.assertNotIn(local_pref, read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertNotIn(local_pref, frrconfig)
+
+        # the VRF instance has the same default: 100 is not rendered in the
+        # VRF block, 200 is rendered in the VRF block only
+        vrf_header = f'router bgp {ASN} vrf {import_vrf}'
+        vrf_local_pref = import_vrf_base + [import_vrf, 'protocols', 'bgp', 'parameters', 'default', 'local-pref']
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(vrf_local_pref + ['100'])
+        self.cli_commit()
+
+        frrconfig = read_file(frr_conf)
+        self.assertIn(vrf_header, frrconfig)
+        self.assertNotIn(local_pref, frrconfig)
+
+        self.cli_set(vrf_local_pref + ['200'])
+        self.cli_commit()
+
+        # the global block comes first in the file, the VRF block after it
+        global_block, _, vrf_block = read_file(frr_conf).partition(vrf_header)
+        self.assertIn(f'router bgp {ASN}', global_block)
+        self.assertNotIn(local_pref, global_block)
+        self.assertIn(f'{local_pref} 200', vrf_block)
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(f'{local_pref} 200', frrconfig)
+
+    def test_bgp_108_reject_as_sets_default_value(self):
+        # FRR 10.5+ defaults to "bgp reject-as-sets" and does not print the
+        # default in its running config. If we render the line anyway,
+        # frr-reload finds it missing on every reload and sends it again, and
+        # FRR resets every BGP session for each of those. So only the
+        # non-default form ("no bgp reject-as-sets") must be rendered.
+        #
+        # This reads the generated FRR config file besides getFRRconfig():
+        # FRR never prints the default form, so vtysh cannot tell if we render it.
+        frr_conf = '/run/frr/config/dozenos.frr.conf'
+        reject = ' bgp reject-as-sets'
+        no_reject = ' no bgp reject-as-sets'
+
+        # not set: the non-default form is rendered and FRR has it
+        self.cli_commit()
+        self.assertIn(no_reject, read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(no_reject, frrconfig)
+
+        # set: this is the FRR default, nothing is rendered and FRR has the
+        # default again (the "no" line is gone from its running config)
+        self.cli_set(base_path + ['parameters', 'reject-as-sets'])
+        self.cli_commit()
+        frrconfig = read_file(frr_conf)
+        self.assertIn(f'router bgp {ASN}', frrconfig)
+        self.assertNotIn(reject, frrconfig)
+        self.assertNotIn(no_reject, frrconfig)
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertNotIn(reject, frrconfig)
+
+        # deleted again: FRR must go back to "no bgp reject-as-sets"
+        self.cli_delete(base_path + ['parameters', 'reject-as-sets'])
+        self.cli_commit()
+        self.assertIn(no_reject, read_file(frr_conf))
+        frrconfig = self.getFRRconfig(f'router bgp {ASN}', stop_section='^exit')
+        self.assertIn(no_reject, frrconfig)
+
+        # the VRF instance renders the same way: set only in the VRF instance,
+        # the global block keeps its "no" line and the VRF block has none
+        vrf_header = f'router bgp {ASN} vrf {import_vrf}'
+        vrf_reject = import_vrf_base + [import_vrf, 'protocols', 'bgp', 'parameters', 'reject-as-sets']
+        self.create_bgp_instances_for_import_test()
+        self.cli_set(vrf_reject)
+        self.cli_commit()
+
+        global_block, sep, vrf_block = read_file(frr_conf).partition(vrf_header)
+        # the VRF instance must be rendered, else the checks below prove nothing
+        self.assertEqual(sep, vrf_header)
+        self.assertIn(f'router bgp {ASN}', global_block)
+        self.assertIn(no_reject, global_block)
+        self.assertNotIn(reject, vrf_block)
+        self.assertNotIn(no_reject, vrf_block)
+        frrconfig = self.getFRRconfig(vrf_header, stop_section='^exit')
+        self.assertIn(vrf_header, frrconfig)
+        self.assertNotIn(no_reject, frrconfig)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())

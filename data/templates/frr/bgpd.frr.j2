@@ -619,7 +619,8 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is dozenos_defined }} {{ 'as-n
 {# Doesn't work in current FRR configuration; vtysh (bgp dampening 16 751 2001 61) #}
  bgp dampening {{ parameters.dampening.half_life }} {{ parameters.dampening.re_use if parameters.dampening.re_use is dozenos_defined }} {{ parameters.dampening.start_suppress_time if parameters.dampening.start_suppress_time is dozenos_defined }} {{ parameters.dampening.max_suppress_time if parameters.dampening.max_suppress_time is dozenos_defined }}
 {% endif %}
-{% if parameters.default.local_pref is dozenos_defined %}
+{# xml_default_local_pref is the XML default of parameters default local-pref, added to the dict by frrender #}
+{% if parameters.default.local_pref is dozenos_defined and parameters.default.local_pref != xml_default_local_pref %}
  bgp default local-preference {{ parameters.default.local_pref }}
 {% endif %}
 {% if parameters.deterministic_med is dozenos_defined %}
@@ -672,9 +673,11 @@ router bgp {{ system_as }} {{ 'vrf ' ~ vrf if vrf is dozenos_defined }} {{ 'as-n
 {% if parameters.no_suppress_duplicates is dozenos_defined %}
  no bgp suppress-duplicates
 {% endif %}
-{% if parameters.reject_as_sets is dozenos_defined %}
- bgp reject-as-sets
-{% else %}
+{# FRR 10.5+ defaults to "bgp reject-as-sets" and does not print the default
+   in show running-config. frr-reload would find the line missing on every
+   reload and send it again, and FRR resets every peer for each application.
+   Only the non-default form is rendered. #}
+{% if parameters.reject_as_sets is not dozenos_defined %}
  no bgp reject-as-sets
 {% endif %}
 {% if parameters.router_id is dozenos_defined and parameters.router_id is not none %}
