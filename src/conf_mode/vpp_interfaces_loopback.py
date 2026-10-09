@@ -21,6 +21,8 @@ from dozenos import ConfigError
 
 from dozenos.config import Config
 from dozenos.configdict import get_interface_dict
+from dozenos.configverify import verify_mtu_parent
+from dozenos.configverify import verify_vlan_config
 from dozenos.configdep import set_dependents, call_dependents
 from dozenos.utils.process import is_systemd_service_active
 
@@ -28,6 +30,9 @@ from dozenos.ifconfig.vpp import VPPLoopbackInterface
 from dozenos.vpp.config_deps import deps_bridge_dict
 from dozenos.vpp.config_verify import verify_vpp_remove_bridge_interface
 from dozenos.vpp.config_verify import verify_vpp_remove_interface
+
+# MTU VPP creates a loopback with when none is configured
+VPP_LOOPBACK_DEFAULT_MTU = 9000
 
 
 def get_config(config=None) -> dict:
@@ -50,6 +55,13 @@ def get_config(config=None) -> dict:
     if not conf.exists(['vpp']) and not conf.exists(base):
         config['remove_vpp'] = True
         return config
+
+    # A VLAN sub-interface inherits the parent MTU when its own is unset; set it
+    # explicitly so a removed sub-interface MTU reverts to the parent instead of
+    # keeping its previous value.
+    if 'mtu' in config:
+        for vlan in config.get('vif', {}).values():
+            vlan.setdefault('mtu', config['mtu'])
 
     # Get 'vpp settings' config
     config['vpp_settings'] = conf.get_config_dict(
@@ -105,6 +117,16 @@ def verify(config):
     for vif_remove in config.get('vif_remove', []):
         vif_iface = f'{config["ifname"]}.{vif_remove}'
         verify_vpp_remove_interface(vif_iface, config['vpp'])
+
+    # Validate VLAN sub-interfaces, incl. MTU against the parent
+    verify_vlan_config(config)
+
+    # verify_vlan_config() skips the VLAN MTU check when the parent has no MTU.
+    # Without a configured MTU the loopback has VPP's default; check VLAN MTUs
+    # against that instead.
+    if 'mtu' not in config:
+        for vlan in config.get('vif', {}).values():
+            verify_mtu_parent(vlan, {'mtu': VPP_LOOPBACK_DEFAULT_MTU})
 
     return None
 
