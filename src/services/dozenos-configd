@@ -39,6 +39,7 @@ from dozenos.configsource import ConfigSourceString
 from dozenos.configsource import ConfigSourceError
 from dozenos.configdiff import get_commit_scripts
 from dozenos.config import Config
+from dozenos.configdep import clear_dependents_initial
 from dozenos.frrender import FRRender
 from dozenos.frrender import frr_render_lock
 from dozenos.frrender import get_frrender_dict
@@ -205,6 +206,7 @@ def process_node_data(config_manager: ConfigManager, data) -> tuple[Response, st
     os.environ['DOZENOS_TAGNODE_VALUE'] = ''
     args = []
     config.dependency_list.clear()
+    clear_dependents_initial()
 
     res = re.match(r'^(DOZENOS_TAGNODE_VALUE=[^/]+)?.*\/([^/]+).py(.*)', data)
     if res.group(1):

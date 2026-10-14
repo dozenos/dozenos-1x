@@ -45,6 +45,7 @@ from dozenos.configsource import ConfigSourceCache
 from dozenos.configsource import ConfigSourceError
 from dozenos.configdiff import get_commit_scripts
 from dozenos.config import Config
+from dozenos.configdep import clear_dependents_initial
 from dozenos.frrender import FRRender
 from dozenos.frrender import frr_render_lock
 from dozenos.frrender import get_frrender_dict
@@ -335,6 +336,7 @@ def process_call_data(call: Call, config: Config, last: bool = False) -> None:
         return
 
     config.dependency_list.clear()
+    clear_dependents_initial()
 
     tag_value = call.tag_value if call.tag_value is not None else ''
     os.environ['DOZENOS_TAGNODE_VALUE'] = tag_value
