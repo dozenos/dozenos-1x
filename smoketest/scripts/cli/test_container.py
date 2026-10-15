@@ -24,12 +24,16 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 from ipaddress import ip_interface
 
 from dozenos.configsession import ConfigSessionError
+from dozenos.defaults import directories
+from dozenos.defaults import podman_mount_program
+from dozenos.utils.file import read_file
 from dozenos.utils.network import get_interface_vrf
 from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 
 base_path = ['container']
 PROCESS_NAME = 'conmon'
+config_storage = '/etc/containers/storage.conf'
 
 busybox_image = 'busybox:stable'
 busybox_image_path = '/usr/share/dozenos/busybox-stable.tar'
@@ -643,6 +647,38 @@ class TestContainer(DozenOSUnitTestSHIM.TestCase):
         self.assertEqual(tmp, vrf_name)
 
         self.cli_delete(['vrf', 'name', vrf_name])
+
+    def test_storage_mount_program(self):
+        cont_name = 'storage-test'
+        graphroot = directories['podman_storage']
+
+        self.cli_set(base_path + ['name', cont_name, 'image', busybox_image])
+        self.cli_set(base_path + ['name', cont_name, 'allow-host-networks'])
+        self.cli_set(base_path + ['name', cont_name, 'stop-timeout', '1'])
+        self.cli_commit()
+
+        self.assertTrue(self.is_running(cont_name))
+
+        config = read_file(config_storage)
+        self.assertIn(f'graphroot = "{graphroot}"', config)
+
+        # fuse-overlayfs is only required when the graphroot sits on overlayfs
+        # (live boot), the kernel overlay driver is used everywhere else
+        fstype = cmdl(['findmnt', '--noheadings', '--output', 'FSTYPE',
+                       '--target', graphroot], sudo=True)
+        if fstype == 'overlay':
+            self.assertIn(f'mount_program = "{podman_mount_program}"', config)
+            return
+
+        self.assertNotIn('mount_program', config)
+
+        # Storage once used with a mount program keeps using fuse-overlayfs
+        # until it is reset, see T9456
+        flag = read_file(os.path.join(graphroot, 'overlay', '.has-mount-program'),
+                         defaultonfailure='', sudo=True)
+        if flag.strip() != 'true':
+            helper = os.path.basename(podman_mount_program)
+            self.assertIsNone(process_named_running(helper))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())

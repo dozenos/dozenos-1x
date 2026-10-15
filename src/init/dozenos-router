@@ -228,17 +228,25 @@ load_bootfile ()
     return 0
 }
 
-# restore if missing pre-config script
-restore_if_missing_preconfig_script ()
+# restore a bootup script from the image if the config volume has none
+restore_if_missing_bootup_script ()
 {
-    if [ ! -x ${vyatta_sysconfdir}/config/scripts/dozenos-preconfig-bootup.script ]; then
-        mkdir -p ${vyatta_sysconfdir}/config/scripts
-        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts
-        chmod 775 ${vyatta_sysconfdir}/config/scripts
-        cp ${dozenos_rootfs_dir}/opt/vyatta/etc/config/scripts/dozenos-preconfig-bootup.script ${vyatta_sysconfdir}/config/scripts/
-        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts/dozenos-preconfig-bootup.script
-        chmod 750 ${vyatta_sysconfdir}/config/scripts/dozenos-preconfig-bootup.script
+    local script=dozenos-${1}config-bootup.script
+    local dir=${vyatta_sysconfdir}/config/scripts
+
+    [ -x "${dir}/${script}" ] && return 0
+
+    mkdir -p "${dir}"
+    chgrp ${GROUP} "${dir}"
+    chmod 775 "${dir}"
+    # quoted, so a rootfs path that is empty or not a single word fails here
+    # instead of copying whatever the words happen to name
+    if ! cp "${dozenos_rootfs_dir}/opt/vyatta/etc/config/scripts/${script}" "${dir}/"; then
+        log_failure_msg "could not restore ${script}"
+        return 1
     fi
+    chgrp ${GROUP} "${dir}/${script}"
+    chmod 750 "${dir}/${script}"
 }
 
 # execute the pre-config script
@@ -246,19 +254,6 @@ run_preconfig_script ()
 {
     if [ -x $vyatta_sysconfdir/config/scripts/dozenos-preconfig-bootup.script ]; then
         $vyatta_sysconfdir/config/scripts/dozenos-preconfig-bootup.script
-    fi
-}
-
-# restore if missing post-config script
-restore_if_missing_postconfig_script ()
-{
-    if [ ! -x ${vyatta_sysconfdir}/config/scripts/dozenos-postconfig-bootup.script ]; then
-        mkdir -p ${vyatta_sysconfdir}/config/scripts
-        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts
-        chmod 775 ${vyatta_sysconfdir}/config/scripts
-        cp ${dozenos_rootfs_dir}/opt/vyatta/etc/config/scripts/dozenos-postconfig-bootup.script ${vyatta_sysconfdir}/config/scripts/
-        chgrp ${GROUP} ${vyatta_sysconfdir}/config/scripts/dozenos-postconfig-bootup.script
-        chmod 750 ${vyatta_sysconfdir}/config/scripts/dozenos-postconfig-bootup.script
     fi
 }
 
@@ -638,7 +633,7 @@ start ()
     # resolved against it before anything below applies interface config.
     systemctl start dozenos-net-name-resolve.service || overall_status=1
 
-    restore_if_missing_preconfig_script
+    restore_if_missing_bootup_script pre
 
     run_preconfig_script
 
@@ -708,7 +703,7 @@ start ()
     telinit q
     chmod g-w,o-w /
 
-    restore_if_missing_postconfig_script
+    restore_if_missing_bootup_script post
 
     run_postconfig_scripts
     tmp=$(${dozenos_libexec_dir}/read-saved-value.py --path "protocols rpki cache")

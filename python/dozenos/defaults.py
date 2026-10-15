@@ -64,10 +64,12 @@ config_files = {
 
 config_status = '/tmp/dozenos-config-status'
 api_config_state = '/run/http-api-state'
+api_ready_state = '/run/http-api-ready'
 frr_debug_enable = '/tmp/dozenos.frr.debug'
 dhclient_debug_enable = '/tmp/dozenos.dhclient.debug'
 static_route_dhcp_interfaces_path = '/tmp/static_dhcp_interfaces'
 dozenos_configd_socket_path = 'ipc:///run/dozenos-configd.sock'
+podman_mount_program = '/usr/bin/fuse-overlayfs'
 
 cfg_group = 'vyattacfg'
 

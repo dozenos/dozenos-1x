@@ -32,6 +32,7 @@ from uvicorn import Server as UvicornServer
 
 from dozenos.configsession import ConfigSession
 from dozenos.defaults import api_config_state
+from dozenos.defaults import api_ready_state
 from dozenos.utils.file import read_file
 from dozenos.version import get_version
 
@@ -121,12 +122,20 @@ class ApiServer(UvicornServer):
     def install_signal_handlers(self):
         pass
 
+    async def startup(self, sockets=None):
+        await super().startup(sockets=sockets)
+        # Tells service_https.py that the socket accepts requests again
+        if self.started:
+            open(api_ready_state, 'w').close()
+
 
 def reload_handler(signum, frame):
     # pylint: disable=global-statement
 
     global server
     LOG.debug('Reload signal received...')
+    if os.path.exists(api_ready_state):
+        os.unlink(api_ready_state)
     if server is not None:
         server.handle_exit(signum, frame)
         server = None
@@ -140,6 +149,8 @@ def shutdown_handler(signum, frame):
 
     global shutdown
     LOG.debug('Shutdown signal received...')
+    if os.path.exists(api_ready_state):
+        os.unlink(api_ready_state)
     server.handle_exit(signum, frame)
     LOG.info('Server shutdown...')
     shutdown = True

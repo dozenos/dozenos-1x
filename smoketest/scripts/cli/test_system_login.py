@@ -61,7 +61,7 @@ pHJz8umqkxy3hfw0K7BRFtjWd63sbOP8Q/SDV7LPaIfIxenA9zv2rY7y+AIqTmSr
 TTSb0X1zPGxPIRFy5GoGtO9Mm5h4OZk=
 """
 
-tac_image = 'docker.io/lfkeitel/tacacs_plus:alpine'
+tac_image = 'docker.io/dozenos/tacacs_plus:alpine-slim'
 tac_image_path = '/usr/share/dozenos/tacplus-alpine.tar'
 TAC_PLUS_TMPL_SRC = """
 id = spawnd {
@@ -108,7 +108,7 @@ id = tac_plus {
 
 """
 
-radius_image = 'docker.io/dchidell/radius-web:latest'
+radius_image = 'docker.io/dozenos/radius_server:latest'
 radius_image_path = '/usr/share/dozenos/radius-latest.tar'
 RADIUS_CLIENTS_TMPL_SRC = """
 client SMOKETEST {
