@@ -62,6 +62,10 @@ from dozenos import ConfigError
 from dozenos import airbag
 airbag.enable()
 
+def cli_path(option_path: str) -> str:
+    """ Undo key mangling of a dotted option path for user-facing messages """
+    return option_path.replace('.', ' ').replace('_', '-')
+
 def update_bond_options(conf: Config, eth_conf: dict) -> list:
     """
     Return list of blocked options if interface is a bond member
@@ -116,7 +120,7 @@ def update_bond_options(conf: Config, eth_conf: dict) -> list:
                 if bond_option_value is not None:
                     if is_node_changed(conf, eth_path_base + option_path.split('.')):
                         Warning(
-                            f'Cannot apply "{option_path.replace(".", " ")}" to "{option_value}".' \
+                            f'Cannot apply "{cli_path(option_path)}" to "{option_value}".' \
                             f' Interface "{eth_conf["ifname"]}" is a bond member.' \
                             f' Option is inherited from bond "{bond_name}"')
                     dict_set(option_path, bond_option_value, eth_conf)
@@ -126,7 +130,7 @@ def update_bond_options(conf: Config, eth_conf: dict) -> list:
                 else:
                     if is_node_changed(conf, eth_path_base + option_path.split('.')):
                         Warning(
-                            f'Cannot apply "{option_path.replace(".", " ")}".' \
+                            f'Cannot apply "{cli_path(option_path)}".' \
                             f' Interface "{eth_conf["ifname"]}" is a bond member.' \
                             f' Option is inherited from bond "{bond_name}"')
                     dict_delete(option_path, eth_conf)
@@ -139,7 +143,7 @@ def update_bond_options(conf: Config, eth_conf: dict) -> list:
             if option_path not in eth_dict_paths:
                 if is_node_changed(conf, eth_path_base + option_path.split('.')):
                     Warning(
-                        f'Cannot apply "{option_path.replace(".", " ")}" to "{dict_search(option_path, config_with_defaults)}".' \
+                        f'Cannot apply "{cli_path(option_path)}" to "{dict_search(option_path, config_with_defaults)}".' \
                         f' Interface "{eth_conf["ifname"]}" is a bond member. ' \
                         f'Option is inherited from bond "{bond_name}"')
                 dict_set(option_path, bond_option_value, eth_conf)
@@ -425,7 +429,7 @@ def verify_allowedbond_changes(ethernet: dict):
     """
     if 'bond_blocked_changes' in ethernet:
         for option in ethernet['bond_blocked_changes']:
-            raise ConfigError(f'Cannot configure "{option.replace(".", " ")}"' \
+            raise ConfigError(f'Cannot configure "{cli_path(option)}"' \
                               f' on interface "{ethernet["ifname"]}".' \
                               f' Interface is a bond member')
 

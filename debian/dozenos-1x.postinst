@@ -298,3 +298,9 @@ fi
 if systemctl is-active --quiet dozenos-netlinkd; then
     systemctl restart dozenos-netlinkd
 fi
+
+# Enable DHCPv4 stuck-RENEW watchdog
+systemctl enable dozenos-dhclient-lease-watch.timer
+if [ -d /run/systemd/system ]; then
+    systemctl start dozenos-dhclient-lease-watch.timer
+fi

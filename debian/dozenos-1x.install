@@ -43,4 +43,5 @@ usr/libexec/dozenos/validate-value
 usr/libexec/dozenos/vyconf
 usr/libexec/dozenos/*.py
 usr/libexec/dozenos/*.sh
+usr/libexec/dozenos/dozenos-dhclient-lease-watch
 usr/share

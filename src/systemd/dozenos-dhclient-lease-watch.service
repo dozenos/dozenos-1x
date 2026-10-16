@@ -1,0 +1,10 @@
+[Unit]
+Description=DozenOS DHCPv4 stuck-RENEW watchdog (oneshot)
+Documentation=man:dhclient(8)
+After=dozenos-router.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/libexec/dozenos/dozenos-dhclient-lease-watch
+SyslogIdentifier=dozenos-dhclient-lease-watch
+Nice=10
