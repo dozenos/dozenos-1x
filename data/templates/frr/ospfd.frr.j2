@@ -211,11 +211,8 @@ router ospf {{ 'vrf ' ~ vrf if vrf is dozenos_defined }}
 {% if parameters.abr_type is dozenos_defined %}
  ospf abr-type {{ parameters.abr_type }}
 {% endif %}
-{% if parameters.opaque_lsa is dozenos_defined %}
- ospf opaque-lsa
-{% endif %}
 {% if parameters.rfc1583_compatibility is dozenos_defined %}
- ospf rfc1583compatibility
+ compatible rfc1583
 {% endif %}
 {% if parameters.router_id is dozenos_defined %}
  ospf router-id {{ parameters.router_id }}
