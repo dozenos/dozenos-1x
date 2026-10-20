@@ -181,9 +181,6 @@ def verify(conntrack):
     return None
 
 def generate(conntrack):
-    if not os.path.exists(nftables_ct_file):
-        conntrack['first_install'] = True
-
     if 'log' not in conntrack:
         # Remove old conntrack-logger config and return
         if os.path.exists(dozenos_conntrack_logger_config):

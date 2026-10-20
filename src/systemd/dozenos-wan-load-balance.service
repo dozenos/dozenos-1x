@@ -6,6 +6,7 @@ After=dozenos-router.service
 Type=simple
 Restart=always
 ExecStart=/usr/bin/python3 /usr/libexec/dozenos/dozenos-load-balancer.py
+ExecReload=/bin/kill -HUP $MAINPID
 
 [Install]
 WantedBy=multi-user.target

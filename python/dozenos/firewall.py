@@ -24,8 +24,10 @@ from dozenos.utils.dict import dict_search_args
 from dozenos.utils.dict import dict_search_recursive
 from dozenos.utils.process import cmdl
 from dozenos.utils.network import get_vrf_tableid
+from dozenos.defaults import fragment_mark_bit
 from dozenos.defaults import rt_global_table
 from dozenos.defaults import rt_global_vrf
+from dozenos.defaults import user_mark_mask
 
 # Conntrack
 def conntrack_required(conf):
@@ -463,11 +465,11 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
 
     if 'fragment' in rule_conf:
         # Checking for fragmentation after priority -400 is not possible,
-        # so we use a priority -450 hook to set a mark
+        # a priority -450 hook sets bit 31 of the mark on fragments
         if 'match_frag' in rule_conf['fragment']:
-            output.append('meta mark 0xffff1')
+            output.append(f'meta mark & {fragment_mark_bit} == {fragment_mark_bit}')
         if 'match_non_frag' in rule_conf['fragment']:
-            output.append('meta mark != 0xffff1')
+            output.append(f'meta mark & {fragment_mark_bit} != {fragment_mark_bit}')
 
     if 'limit' in rule_conf:
         if 'rate' in rule_conf['limit']:
@@ -537,7 +539,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
         if mark[0] == '!':
             operator = '!='
             mark = mark[1:]
-        output.append(f'meta mark {operator} {{{mark}}}')
+        output.append(f'meta mark & {user_mark_mask} {operator} {{{mark}}}')
 
     if 'vlan' in rule_conf:
         if 'id' in rule_conf['vlan']:
@@ -609,7 +611,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
             output.append(f'ip{def_suffix} dscp set {dscp}')
         if 'mark' in rule_conf['set']:
             mark = rule_conf['set']['mark']
-            output.append(f'meta mark set {mark}')
+            output.append(f'meta mark set meta mark & {fragment_mark_bit} | {mark}')
         if 'vrf' in rule_conf['set']:
             set_table = True
             vrf_name = rule_conf['set']['vrf']
@@ -625,7 +627,7 @@ def parse_rule(rule_conf, hook, fw_name, rule_id, ip_name):
                 table = rt_global_table
         if set_table:
             mark = 0x7FFFFFFF - int(table)
-            output.append(f'meta mark set {mark}')
+            output.append(f'meta mark set meta mark & {fragment_mark_bit} | {mark}')
         if 'tcp_mss' in rule_conf['set']:
             mss = rule_conf['set']['tcp_mss']
             output.append(f'tcp option maxseg size set {mss}')
@@ -723,15 +725,18 @@ def parse_time(time):
         if 'T' not in start and 'starttime' in time:
             start += f' {time["starttime"]}'
         out.append(f'time >= "{start}"')
-    if 'starttime' in time and 'startdate' not in time:
-        out.append(f'hour >= "{time["starttime"]}"')
     if 'stopdate' in time:
         stop = time['stopdate']
         if 'T' not in stop and 'stoptime' in time:
             stop += f' {time["stoptime"]}'
         out.append(f'time < "{stop}"')
-    if 'stoptime' in time and 'stopdate' not in time:
-        out.append(f'hour < "{time["stoptime"]}"')
+    # nft converts hours to UTC when loading the ruleset. Separate >= and <
+    # comparisons never match once the window crosses midnight in UTC, a range
+    # is turned into its complement by nft instead.
+    hour_start = time['starttime'] if 'starttime' in time and 'startdate' not in time else None
+    hour_stop = time['stoptime'] if 'stoptime' in time and 'stopdate' not in time else None
+    if hour_start or hour_stop:
+        out.append(f'hour "{hour_start or "00:00"}"-"{hour_stop or "23:59:59"}"')
     if 'weekdays' in time:
         days = [day.strip() for day in time['weekdays'].split(",") if day]
         out_days = [f'"{expand_weekday(day).title()}"' for day in days if day[0] != '!']

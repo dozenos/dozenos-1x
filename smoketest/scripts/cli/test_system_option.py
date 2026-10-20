@@ -28,6 +28,7 @@ from dozenos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
 from dozenos.utils.cpu import get_cpus
 from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
+from dozenos.utils.kernel import get_kernel_boot_arg
 from dozenos.utils.process import is_systemd_service_active
 from dozenos.utils.system import sysctl_read
 from dozenos.system import image
@@ -221,10 +222,17 @@ class TestSystemOption(DozenOSUnitTestSHIM.TestCase):
             'initramfs hook must contain MODULES=most to work on OverlayFS root',
         )
 
-        self.assertTrue(
-            is_systemd_service_active(service),
-            f'{service} must be active after enabling kdump',
-        )
+        # kdump-tools only starts when booted with crashkernel=
+        if get_kernel_boot_arg('crashkernel') is not None:
+            self.assertTrue(
+                is_systemd_service_active(service),
+                f'{service} must be active when booted with crashkernel=',
+            )
+        else:
+            self.assertFalse(
+                is_systemd_service_active(service),
+                f'{service} must be skipped when booted without crashkernel=',
+            )
 
         # Disabling kdump must remove the initramfs conf.d drop-in
         self.cli_delete(kdump_path)

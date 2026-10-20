@@ -538,5 +538,24 @@ class TestSystemConntrack(DozenOSUnitTestSHIM.TestCase):
         self.assertEqual('1', get_sysctl('net.netfilter.nf_conntrack_timestamp'))
 
 
+    def test_conntrack_table_recreated(self):
+        # the rule file in /run and the nftables table can drift apart, the
+        # next commit must rebuild the table instead of failing on it
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'source', 'address', 'fe80::1'])
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '11', 'destination', 'address', 'fe80::2'])
+        self.cli_commit()
+
+        cmdl(['nft', 'delete', 'table', 'ip6', 'dozenos_conntrack'], sudo=True)
+
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '12', 'source', 'address', 'fe80::1'])
+        self.cli_set(base_path + ['ignore', 'ipv6', 'rule', '12', 'destination', 'address', 'fe80::3'])
+        self.cli_commit()
+
+        nftables6_search = [
+            ['ip6 saddr fe80::1', 'ip6 daddr fe80::2', 'notrack'],
+            ['ip6 saddr fe80::1', 'ip6 daddr fe80::3', 'notrack'],
+        ]
+        self.verify_nftables(nftables6_search, 'ip6 dozenos_conntrack')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())
