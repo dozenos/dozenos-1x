@@ -33,6 +33,7 @@ from dozenos.utils.process import process_named_running
 from dozenos.utils.file import read_file
 from dozenos.utils.process import rc_cmd
 from dozenos.utils.system import sysctl_read
+from dozenos.utils.system import sysctl_read_default
 from dozenos.utils.network import interface_exists
 from dozenos.system import image
 from dozenos.ifconfig import Interface
@@ -170,6 +171,12 @@ class TestVPP(DozenOSUnitTestSHIM.TestCase):
         config = read_file(VPP_CONF)
         for config_entry in config_entries:
             self.assertIn(config_entry, config)
+
+        # net.core.rmem_max must not cap the netlink receive buffer VPP requests
+        self.assertGreaterEqual(
+            int(sysctl_read(['net', 'core', 'rmem_max'])),
+            default_resource_map['netlink_rx_buffer_size'],
+        )
 
         # route-no-paths is not present in the output
         # looks like vpp bug
@@ -2122,6 +2129,47 @@ class TestVPP(DozenOSUnitTestSHIM.TestCase):
         # cleanup - the IPsec configuration is not covered by tearDown()
         self.cli_delete(ipsec_path)
         self.cli_commit()
+
+    def test_28_vpp_netlink_rmem_max(self):
+        rmem_max_path = ['system', 'sysctl', 'parameter', 'net.core.rmem_max']
+        required = default_resource_map['netlink_rx_buffer_size']
+
+        self.cli_commit()
+        self.assertGreaterEqual(int(sysctl_read(['net', 'core', 'rmem_max'])), required)
+
+        default = sysctl_read_default(['net', 'core', 'rmem_max'])
+        self.assertIsNotNone(default)
+
+        try:
+            # a lower value from system sysctl must not cap VPP's netlink buffer
+            self.cli_set(rmem_max_path + ['value', '4194304'])
+            self.cli_commit()
+            self.assertGreaterEqual(
+                int(sysctl_read(['net', 'core', 'rmem_max'])), required
+            )
+
+            # removing VPP restores the value from system sysctl
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.assertEqual(sysctl_read(['net', 'core', 'rmem_max']), '4194304')
+
+            # without system sysctl, removing VPP restores the DozenOS default
+            self.cli_delete(rmem_max_path)
+            self.cli_set(base_path + ['settings', 'interface', interface])
+            self.cli_set(base_path + ['settings', 'poll-sleep-usec', '10'])
+            self.cli_commit()
+            self.assertGreaterEqual(
+                int(sysctl_read(['net', 'core', 'rmem_max'])), required
+            )
+            self.cli_delete(base_path)
+            self.cli_commit()
+            self.assertEqual(sysctl_read(['net', 'core', 'rmem_max']), default)
+        finally:
+            # tearDown() expects VPP running
+            self.cli_delete(rmem_max_path)
+            self.cli_set(base_path + ['settings', 'interface', interface])
+            self.cli_set(base_path + ['settings', 'poll-sleep-usec', '10'])
+            self.cli_commit()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())

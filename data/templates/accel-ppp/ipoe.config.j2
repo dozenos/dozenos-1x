@@ -41,6 +41,18 @@ verbose=1
 {% if idle_timeout is dozenos_defined %}
 idle-timeout={{ idle_timeout }}
 {% endif %}
+{% if lease_time is dozenos_defined %}
+lease-time={{ lease_time }}
+{% endif %}
+{% if max_lease_time is dozenos_defined %}
+max-lease-time={{ max_lease_time }}
+{% endif %}
+{% if renew_time is dozenos_defined %}
+renew-time={{ renew_time }}
+{% endif %}
+{% if rebind_time is dozenos_defined %}
+rebind-time={{ rebind_time }}
+{% endif %}
 {% if lua_file is dozenos_defined %}
 lua-file={{ lua_file }}
 {% endif %}

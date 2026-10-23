@@ -70,6 +70,7 @@ dhclient_debug_enable = '/tmp/dozenos.dhclient.debug'
 static_route_dhcp_interfaces_path = '/tmp/static_dhcp_interfaces'
 dozenos_configd_socket_path = 'ipc:///run/dozenos-configd.sock'
 podman_mount_program = '/usr/bin/fuse-overlayfs'
+dozenos_domain_resolver_condition_path = '/run/use-dozenos-domain-resolver'
 
 cfg_group = 'vyattacfg'
 
