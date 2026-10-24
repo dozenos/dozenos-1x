@@ -130,6 +130,9 @@ linux-nl {
 
 {% if resource_allocation.memory.stats is dozenos_defined %}
 statseg {
+{%     if resource_allocation.memory.stats.per_node_counters is dozenos_defined %}
+    per-node-counters on
+{%     endif %}
 {%     if resource_allocation.memory.stats.size is dozenos_defined %}
     size {{ resource_allocation.memory.stats.size }}
 {%     endif %}

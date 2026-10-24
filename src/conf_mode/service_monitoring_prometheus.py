@@ -19,6 +19,7 @@ import os
 
 from sys import exit
 
+from dozenos.base import Warning
 from dozenos.config import Config
 from dozenos.configdep import call_dependents
 from dozenos.configdep import set_dependents
@@ -27,6 +28,8 @@ from dozenos.configdict import node_changed
 from dozenos.configdiff import Diff
 from dozenos.configverify import verify_vrf
 from dozenos.template import render
+from dozenos.utils.network import check_port_availability
+from dozenos.utils.network import is_listen_port_bind_service
 from dozenos.utils.process import call
 from dozenos.utils.process import is_systemd_service_active
 from dozenos import ConfigError
@@ -43,6 +46,67 @@ frr_exporter_systemd_service = 'frr_exporter.service'
 
 blackbox_exporter_service_file = '/etc/systemd/system/blackbox_exporter.service'
 blackbox_exporter_systemd_service = 'blackbox_exporter.service'
+
+vpp_exporter_service_file = '/etc/systemd/system/vpp_exporter.service'
+vpp_exporter_systemd_service = 'vpp_exporter.service'
+vpp_exporter_enable_link = '/etc/systemd/system/vpp.service.wants/vpp_exporter.service'
+vpp_exporter_process_name = 'vpp_prometheus_export'
+
+vpp_system_stat_patterns = (
+    '^/sys/heartbeat$',
+    '^/sys/last_stats_clear$',
+    '^/sys/boottime$',
+    '^/sys/vector_rate$',
+    '^/sys/vector_rate_per_worker$',
+    '^/sys/loops_per_worker$',
+    '^/sys/num_worker_threads$',
+    '^/sys/last_update$',
+    '^/sys/input_rate$',
+)
+vpp_nat44_stat_patterns = (
+    '^/nat44-.*/total-sessions$',
+    '^/nat44-ed/max-cfg-sessions$',
+    '^/nat44-ed/in2out/fastpath/.*$',
+    '^/nat44-ed/out2in/fastpath/.*$',
+    '^/nat44-ed/in2out/slowpath/.*$',
+    '^/nat44-ed/out2in/slowpath/.*$',
+    '^/nat44-ed/hairpinning$',
+)
+vpp_acl_stat_patterns = ('^/acl/.*/matches$',)
+vpp_stat_group_patterns = {
+    'interfaces': ('^/interfaces',),
+    'err': ('^/err',),
+    'buffer-pools': ('^/buffer-pools',),
+    'system': vpp_system_stat_patterns,
+    'workers': ('^/workers',),
+    'nodes': ('^/nodes',),
+    'memory': ('^/mem',),
+    'nat44': vpp_nat44_stat_patterns,
+    'acl': vpp_acl_stat_patterns,
+}
+vpp_default_stat_groups = [
+    'interfaces',
+    'err',
+    'buffer-pools',
+    'system',
+    'workers',
+    'memory',
+]
+
+
+def build_vpp_stat_patterns(vpp_exporter):
+    selected_groups = vpp_exporter.get('stat_group', [])
+
+    if not selected_groups:
+        selected_groups = vpp_default_stat_groups
+
+    selected_groups = set(selected_groups)
+    return [
+        pattern
+        for group_name, group_patterns in vpp_stat_group_patterns.items()
+        if group_name in selected_groups
+        for pattern in group_patterns
+    ]
 
 
 def get_config(config=None):
@@ -72,6 +136,7 @@ def get_config(config=None):
         'node_exporter': base + ['node-exporter'],
         'frr_exporter': base + ['frr-exporter'],
         'blackbox_exporter': base + ['blackbox-exporter'],
+        'vpp_exporter': base + ['vpp-exporter'],
     }
 
     for exporter_name, exporter_base in exporters.items():
@@ -98,6 +163,35 @@ def get_config(config=None):
             base + ['frr-exporter', 'collector', 'bgp', 'peer-description']
         ):
             collector.get('bgp', {}).pop('peer_description', None)
+    if 'vpp_exporter' in monitoring:
+        vpp_exporter = monitoring['vpp_exporter']
+        vpp_exporter['patterns'] = build_vpp_stat_patterns(vpp_exporter)
+        vpp_per_node_counters_path = [
+            'vpp',
+            'settings',
+            'resource-allocation',
+            'memory',
+            'stats',
+            'per-node-counters',
+        ]
+        vpp_exporter['vpp_per_node_counters_enabled'] = conf.exists(
+            vpp_per_node_counters_path
+        )
+        vpp_exporter['vpp_configured'] = conf.exists(['vpp'])
+
+        configured_groups = conf.return_values(base + ['vpp-exporter', 'stat-group'])
+        effective_groups = conf.return_effective_values(
+            base + ['vpp-exporter', 'stat-group']
+        )
+
+        nodes_requested = 'nodes' in configured_groups
+        nodes_requested_effective = 'nodes' in effective_groups
+        counters_were_enabled = conf.exists_effective(vpp_per_node_counters_path)
+        vpp_exporter['nodes_counters_warning_required'] = (
+            nodes_requested
+            and not vpp_exporter['vpp_per_node_counters_enabled']
+            and (not nodes_requested_effective or counters_were_enabled)
+        )
 
     tmp = is_node_changed(conf, base + ['node-exporter', 'vrf'])
     if tmp:
@@ -118,6 +212,11 @@ def get_config(config=None):
     tmp = tmp or 'icmp' in modules_changed
     if tmp:
         monitoring.update({'blackbox_exporter_restart_required': {}})
+
+    if is_node_changed(conf, base + ['vpp-exporter']):
+        monitoring.update({'vpp_exporter_restart_required': {}})
+    if is_node_changed(conf, base + ['vpp-exporter', 'vrf']):
+        monitoring.update({'vpp_exporter_vrf_changed': {}})
 
     return monitoring
 
@@ -148,6 +247,44 @@ def verify(monitoring):
                         f'query name not specified in dns module {mod_name}'
                     )
 
+    if 'vpp_exporter' in monitoring:
+        vpp_exporter = monitoring['vpp_exporter']
+        verify_vrf(vpp_exporter)
+
+        if not vpp_exporter.get('vpp_configured'):
+            raise ConfigError(
+                'No VPP configuration exists. Configure VPP before configuring '
+                'VPP-exporter.'
+            )
+
+        port = int(vpp_exporter['port'])
+        vrf = vpp_exporter.get('vrf')
+        vrf_error_msg = f' in vrf "{vrf}"' if vrf else ''
+        exporter_owns_port = (
+            'vpp_exporter_vrf_changed' not in monitoring
+            and is_listen_port_bind_service(port, vpp_exporter_process_name)
+        )
+        if (
+            not check_port_availability(None, port, 'tcp', vrf=vrf)
+            and not exporter_owns_port
+        ):
+            raise ConfigError(
+                f'TCP port "{port}"{vrf_error_msg} is used by another service!'
+            )
+
+        for group_name in vpp_exporter.get('stat_group', []):
+            if group_name not in vpp_stat_group_patterns:
+                raise ConfigError(f'Invalid stat-group "{group_name}"')
+
+        if vpp_exporter.get('nodes_counters_warning_required'):
+            Warning(
+                'VPP node metrics requested but per-node-counters setting is not '
+                'enabled. Enable it using the following command for "nodes" metrics '
+                'to be available:\n'
+                '"set vpp settings resource-allocation memory stats '
+                'per-node-counters".'
+            )
+
     return None
 
 
@@ -166,6 +303,13 @@ def generate(monitoring):
         # Delete systemd files
         if os.path.isfile(blackbox_exporter_service_file):
             os.unlink(blackbox_exporter_service_file)
+
+    if not monitoring or 'vpp_exporter' not in monitoring:
+        # Delete systemd files
+        if os.path.isfile(vpp_exporter_service_file):
+            os.unlink(vpp_exporter_service_file)
+        if os.path.islink(vpp_exporter_enable_link):
+            os.unlink(vpp_exporter_enable_link)
 
     if not monitoring:
         return None
@@ -207,6 +351,14 @@ def generate(monitoring):
             monitoring['blackbox_exporter'],
         )
 
+    if 'vpp_exporter' in monitoring:
+        # Render vpp_exporter service_file
+        render(
+            vpp_exporter_service_file,
+            'prometheus/vpp_exporter.service.j2',
+            monitoring['vpp_exporter'],
+        )
+
     return None
 
 
@@ -222,6 +374,9 @@ def apply(monitoring):
     if not monitoring or 'blackbox_exporter' not in monitoring:
         if is_systemd_service_active(blackbox_exporter_systemd_service):
             call(f'systemctl stop {blackbox_exporter_systemd_service}')
+    if not monitoring or 'vpp_exporter' not in monitoring:
+        if is_systemd_service_active(vpp_exporter_systemd_service):
+            call(f'systemctl stop {vpp_exporter_systemd_service}')
 
     if not monitoring:
         # T9260: still refresh dependents (e.g. Telegraf's frr-metrics
@@ -259,6 +414,12 @@ def apply(monitoring):
     # enabled, Telegraf's own verify() must fail the commit rather than
     # silently leaving a stale/broken scrape URL behind.
     call_dependents()
+    if 'vpp_exporter' in monitoring:
+        call(f'systemctl enable {vpp_exporter_systemd_service}')
+        if 'vpp_exporter_restart_required' in monitoring:
+            call(f'systemctl restart {vpp_exporter_systemd_service}')
+        elif not is_systemd_service_active(vpp_exporter_systemd_service):
+            call(f'systemctl start {vpp_exporter_systemd_service}')
 
 
 if __name__ == '__main__':
