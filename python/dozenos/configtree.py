@@ -908,6 +908,9 @@ def validate_tree_filter(
         raise ConfigTreeError(e)
 
     msg = lib.get_error().decode()
+    if not res:
+        raise ConfigTreeError(msg)
+
     tree = ConfigTree(address=res)
 
     return tree, msg

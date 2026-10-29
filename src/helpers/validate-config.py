@@ -20,6 +20,7 @@ import sys
 import argparse
 
 from dozenos.configtree import ConfigTree
+from dozenos.configtree import ConfigTreeError
 from dozenos.configtree import validate_tree_filter
 from dozenos.component_version import add_system_version
 
@@ -38,7 +39,10 @@ with open(config_file) as f:
 
 config_tree = ConfigTree(config_str)
 
-valid_tree, out = validate_tree_filter(config_tree)
+try:
+    valid_tree, out = validate_tree_filter(config_tree)
+except ConfigTreeError as e:
+    sys.exit(e)
 
 if filtered_config:
     add_system_version(valid_tree.to_string(), filtered_config)
