@@ -20,7 +20,7 @@
 from dozenos.configtree import ConfigTree
 
 def migrate(config: ConfigTree) -> None:
-    for type in ['pppoe', 'sstpc-client', 'wwam']:
+    for type in ['pppoe', 'sstpc-client', 'wwan']:
         base = ['interfaces', type]
         if not config.exists(base):
             continue
