@@ -18,6 +18,7 @@
 import unittest
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
+from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 
 tunnel_path = ['interfaces', 'tunnel']
@@ -40,6 +41,13 @@ class TestProtocolsNHRP(DozenOSUnitTestSHIM.TestCase):
         self.cli_delete(tunnel_path)
         self.cli_delete(vpn_path)
         self.cli_commit()
+
+        # Deleting NHRP must also remove its nft tables, otherwise the
+        # multicast drop rules keep filtering the tunnel
+        tables = cmdl(['nft', 'list', 'tables'], sudo=True)
+        self.assertNotIn('dozenos_nhrp_multicast', tables)
+        self.assertNotIn('dozenos_nhrp_redirect', tables)
+
         # always forward to base class
         super().tearDown()
 

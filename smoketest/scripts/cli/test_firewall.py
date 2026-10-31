@@ -2010,6 +2010,40 @@ class TestFirewall(DozenOSUnitTestSHIM.TestCase):
         self.verify_nftables(nftables_search, 'ip dozenos_filter')
         self.verify_nftables(nftables_search_v6, 'ip6 dozenos_filter')
 
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vrf'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vif'])
+        self.cli_delete(['interfaces', 'ethernet', 'eth3', 'vif-s'])
+        self.cli_delete(['interfaces', 'vti'])
+        self.cli_delete(['vrf'])
+
+    def test_zone_with_vrf_default_firewall(self):
+        # Local zone + VRF zone with default-firewall
+        self.cli_set(['firewall', 'ipv4', 'name', 'VRF-default', 'default-action', 'accept'])
+        self.cli_set(['firewall', 'zone', 'LOCAL', 'local-zone'])
+        self.cli_set(['firewall', 'zone', 'ZONE1', 'member', 'vrf', 'VRF-1'])
+        self.cli_set(['firewall', 'zone', 'ZONE1', 'default-firewall', 'name', 'VRF-default'])
+
+        self.cli_set(['vrf', 'name', 'VRF-1', 'table', '101'])
+        self.cli_set(['interfaces', 'ethernet', 'eth0', 'vrf', 'VRF-1'])
+
+        self.cli_commit()
+
+        nftables_search = [
+            ['chain VZONE_LOCAL_OUT'],
+            ['oifname "eth0"', 'counter packets', 'jump NAME_VRF-default'],
+            ['oifname "eth0"', 'counter packets', 'return'],
+            # previously rendered as "jump NAME_" and failed the commit
+            ['oifname "VRF-1"', 'counter packets', 'jump NAME_VRF-default'],
+            ['oifname "VRF-1"', 'counter packets', 'return'],
+            ['counter packets', 'drop', 'comment "zone_LOCAL default-action drop"'],
+        ]
+        self.verify_nftables_chain(nftables_search, 'ip dozenos_filter', 'VZONE_LOCAL_OUT')
+
+        # Cleanup
+        self.cli_delete(['interfaces', 'ethernet', 'eth0', 'vrf'])
+        self.cli_delete(['vrf', 'name', 'VRF-1'])
+
     def test_zone_without_member(self):
         self.cli_set(['firewall', 'zone', 'wan', 'default-action', 'drop'])
         error_message = 'Zone "wan" has no interfaces and is not the local zone'
@@ -2555,6 +2589,56 @@ class TestFirewall(DozenOSUnitTestSHIM.TestCase):
         finally:
             cmdl(['date', '-s', f'@{int(wall + monotonic() - mono)}'], sudo=True)
             self.cli_delete(['system', 'time-zone'])
+
+    def test_prerouting_raw_fqdn(self):
+        domain = 'dozenos.io'
+        address = '192.0.2.20'
+        address6 = '2001:db8::20'
+        hostmap_path = ['system', 'static-host-mapping', 'host-name']
+        prerouting_path = ['firewall', 'ipv4', 'prerouting', 'raw']
+        prerouting6_path = ['firewall', 'ipv6', 'prerouting', 'raw']
+
+        # Static mapping, so the test does not depend on external DNS
+        self.cli_set(hostmap_path + [domain, 'inet', address])
+        self.cli_set(hostmap_path + [domain, 'inet', address6])
+
+        self.cli_set(prerouting_path + ['rule', '1', 'action', 'notrack'])
+        self.cli_set(prerouting_path + ['rule', '1', 'destination', 'fqdn', domain])
+        self.cli_set(prerouting6_path + ['rule', '1', 'action', 'notrack'])
+        self.cli_set(prerouting6_path + ['rule', '1', 'destination', 'fqdn', domain])
+
+        self.cli_commit()
+
+        # Check FQDN set exists and the rule uses it
+        self.verify_nftables(
+            [
+                ['set FQDN_prerouting_raw_1_d'],
+                ['ip daddr @FQDN_prerouting_raw_1_d', 'notrack'],
+            ],
+            'ip dozenos_filter',
+        )
+        self.verify_nftables(
+            [
+                ['set FQDN_prerouting_raw_1_d'],
+                ['ip6 daddr @FQDN_prerouting_raw_1_d', 'notrack'],
+            ],
+            'ip6 dozenos_filter',
+        )
+
+        # Check domain resolver fills the sets after commit
+        self.assertTrue(
+            self.wait_for_domain_resolver(
+                'ip dozenos_filter', 'FQDN_prerouting_raw_1_d', address
+            )
+        )
+        self.assertTrue(
+            self.wait_for_domain_resolver(
+                'ip6 dozenos_filter', 'FQDN_prerouting_raw_1_d', address6
+            )
+        )
+
+        self.cli_delete(['system', 'static-host-mapping'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2, failfast=DozenOSUnitTestSHIM.TestCase.debug_on())
