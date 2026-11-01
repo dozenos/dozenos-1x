@@ -1,0 +1,13 @@
+[Unit]
+Description=DozenOS persistent interface naming for hot-plugged hardware
+
+# Pulled in by 60-dozenos-net-hotplug.rules when a network device appears.
+# Held off until the boot-time configuration has been applied, otherwise the
+# boot storm of "add" events would each queue a redundant run.
+ConditionPathExists=/tmp/dozenos-config-status
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/dozenos/system/dozenos-net-name-resolve.py --hotplug
+TimeoutStartSec=90
+StandardOutput=journal

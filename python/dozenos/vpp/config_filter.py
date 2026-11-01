@@ -34,7 +34,6 @@ def iface_filter_eth(config: Config, iface: str) -> None:
         'dhcpv6-options',
         'disable',
         'eapol',
-        'hw-id',
         'ip',
         'ipv6',
         'mac',
