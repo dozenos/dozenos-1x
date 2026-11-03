@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright (C) VyOS Inc.
 # Modifications Copyright DozenOS Contributors. See git history for details.
 #

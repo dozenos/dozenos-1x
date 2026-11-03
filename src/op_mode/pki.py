@@ -1523,11 +1523,11 @@ def renew_certbot(raw: bool, force: typing.Optional[bool] = False):
         # a bad time
         Warning(f'Directory "{certbot_config}" missing. Reinitializing PKI '
                 'subsystem...\n\n')
-        out = cmdl(['sg', 'vyattacfg', '-c', f'{dozenos_conf_scripts_dir}/pki.py'], sudo=True)
+        out = cmdl(['sg', 'vyattacfg', '-c', f'python3 {dozenos_conf_scripts_dir}/pki.py'], sudo=True)
     elif force:
-        out = cmdl(['sg', 'vyattacfg', '-c', f'{dozenos_conf_scripts_dir}/pki.py certbot_renew_force'], sudo=True)
+        out = cmdl(['sg', 'vyattacfg', '-c', f'python3 {dozenos_conf_scripts_dir}/pki.py certbot_renew_force'], sudo=True)
     else:
-        out = cmdl(['sg', 'vyattacfg', '-c', f'{dozenos_conf_scripts_dir}/pki.py certbot_renew'], sudo=True)
+        out = cmdl(['sg', 'vyattacfg', '-c', f'python3 {dozenos_conf_scripts_dir}/pki.py certbot_renew'], sudo=True)
 
     print(out)
 

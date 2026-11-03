@@ -43,4 +43,4 @@ if __name__ == '__main__':
 PYEND
 
 # Now re-generate the config
-sudo /usr/libexec/dozenos/conf_mode/vpn_ipsec.py
+sudo python3 /usr/libexec/dozenos/conf_mode/vpn_ipsec.py

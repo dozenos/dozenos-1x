@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 # Modifications Copyright DozenOS Contributors. See git history for details.
 #
@@ -52,9 +50,9 @@ def get_config(config=None):
 def vpn_control(action, force_ipsec=False):
     # XXX: Should these commands report failure?
     if action == 'restore' and force_ipsec:
-        return run('ipsec start')
+        return run('systemctl start strongswan.service')
 
-    return run(f'ipsec {action}')
+    return run(f'systemctl {action} strongswan.service')
 
 
 def verify(qat):

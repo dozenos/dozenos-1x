@@ -69,7 +69,7 @@ def connect(interface):
         if is_wwan_connected(interface):
             print(f'Interface {interface}: already connected!')
         else:
-            call(f'DOZENOS_TAGNODE_VALUE={interface} /usr/libexec/dozenos/conf_mode/interfaces_wwan.py')
+            call(f'DOZENOS_TAGNODE_VALUE={interface} python3 /usr/libexec/dozenos/conf_mode/interfaces_wwan.py')
     else:
         print(f'Unknown interface {interface}, cannot connect. Aborting!')
 

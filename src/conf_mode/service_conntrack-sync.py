@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright VyOS maintainers and contributors <maintainers@vyos.io>
 # Modifications Copyright DozenOS Contributors. See git history for details.
 #
@@ -37,7 +35,7 @@ airbag.enable()
 config_file = '/run/conntrackd/conntrackd.conf'
 
 def resync_vrrp():
-    tmp = run('/usr/libexec/dozenos/conf_mode/high-availability.py')
+    tmp = run('python3 /usr/libexec/dozenos/conf_mode/high-availability.py')
     if tmp > 0:
         print('ERROR: error restarting VRRP daemon!')
 

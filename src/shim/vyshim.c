@@ -55,6 +55,7 @@
 #define QUEUE_MARKER "/var/tmp/last_in_queue"
 
 #define FRR_RENDER "/usr/libexec/dozenos/dozenos-frr-render.py"
+#define PYTHON3 "/usr/bin/python3"
 
 enum {
     SUCCESS =      1 << 0,
@@ -324,10 +325,13 @@ int pass_through(char **argv, int ex_index)
     char **newargv = NULL;
     pid_t child_pid;
 
-    newargv = &argv[ex_index];
     if (ex_index > 1) {
         putenv(argv[ex_index - 1]);
     }
+    // conf_mode scripts are not executable - run them through the interpreter,
+    // reusing the slot in front of the script for it
+    newargv = &argv[ex_index - 1];
+    newargv[0] = PYTHON3;
 
     debug_print("pass-through invoked\n");
 
@@ -335,7 +339,7 @@ int pass_through(char **argv, int ex_index)
         debug_print("fork() failed\n");
         return -1;
     } else if (child_pid == 0) {
-        if (-1 == execv(argv[ex_index], newargv)) {
+        if (-1 == execv(PYTHON3, newargv)) {
             debug_print("pass_through execve failed %s: %s\n",
                         argv[ex_index], strerror(errno));
             return -1;

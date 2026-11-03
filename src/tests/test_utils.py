@@ -65,8 +65,11 @@ class TestDozenOSUtils(TestCase):
         self.assertEqual(new_data, expected_data)
 
     def test_sysctl_read(self):
+        from dozenos.utils.file import read_file
         from dozenos.utils.system import sysctl_read
-        self.assertEqual(sysctl_read(['net', 'ipv4', 'conf', 'lo', 'forwarding']), '1')
+        # Value depends on the build host's network namespace (0 in LXC)
+        expected = read_file('/proc/sys/net/ipv4/conf/lo/forwarding')
+        self.assertEqual(sysctl_read(['net', 'ipv4', 'conf', 'lo', 'forwarding']), expected)
 
     def test_sysctl_key_normalization(self):
         from dozenos.utils.system import sysctl_read
