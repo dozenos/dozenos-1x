@@ -23,8 +23,10 @@ from dozenos.config import config_dict_merge
 from dozenos.template import render
 from dozenos.utils.process import call
 from dozenos.utils.permission import chmod_755
+from dozenos.utils.permission import chown
 from dozenos.utils.dict import dict_search
 from dozenos.utils.file import write_file
+from dozenos.utils.file import write_file_atomic
 from dozenos.utils.network import is_addr_assigned
 from dozenos.base import Warning
 from dozenos import ConfigError
@@ -33,6 +35,8 @@ from dozenos import airbag
 airbag.enable()
 
 squid_config_file = '/etc/squid/squid.conf'
+# Not in /run/squid: systemd removes that directory whenever squid stops
+squid_ldap_password_file = '/run/squid-ldap.secret'
 squidguard_config_file = '/etc/squidguard/squidGuard.conf'
 squidguard_db_dir = '/opt/vyatta/etc/config/url-filtering/squidguard/db'
 user_group = 'proxy'
@@ -194,8 +198,24 @@ def generate(proxy):
     if not proxy:
         return None
 
+    proxy['ldap_password_file'] = squid_ldap_password_file
     render(squid_config_file, 'squid/squid.conf.j2', proxy)
     render(squidguard_config_file, 'squid/squidGuard.conf.j2', proxy)
+
+    # Pass the LDAP bind password to basic_ldap_auth in a file instead of on its
+    # command line. Squid runs its helpers as the proxy user, so it owns the file.
+    if (
+        dict_search('authentication.method', proxy) == 'ldap'
+        and dict_search('authentication.ldap.password', proxy) is not None
+    ):
+        # Write atomically so the file is never readable by others. Do not strip:
+        # basic_ldap_auth removes only the line ending, spaces are kept.
+        password = proxy['authentication']['ldap']['password']
+        write_file_atomic(squid_ldap_password_file, f'{password}\n')
+        chown(squid_ldap_password_file, user_group, user_group)
+    # Remove a stale file once LDAP authentication no longer uses a password.
+    elif os.path.exists(squid_ldap_password_file):
+        os.unlink(squid_ldap_password_file)
 
     cat_dict = {
         'local-block': 'domains',
@@ -231,6 +251,8 @@ def apply(proxy):
             os.unlink(squid_config_file)
         if os.path.exists(squidguard_config_file):
             os.unlink(squidguard_config_file)
+        if os.path.exists(squid_ldap_password_file):
+            os.unlink(squid_ldap_password_file)
 
         return None
 

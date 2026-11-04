@@ -447,7 +447,7 @@ class Config(object):
         Note:
             It also returns False if node doesn't exist.
         """
-        self._config_source.set_level(self.get_level)
+        self._config_source.set_level(self.get_level())
         return self._config_source.is_multi(path)
 
     def is_tag(self, path):
@@ -461,7 +461,7 @@ class Config(object):
         Note:
             It also returns False if node doesn't exist.
         """
-        self._config_source.set_level(self.get_level)
+        self._config_source.set_level(self.get_level())
         return self._config_source.is_tag(path)
 
     def is_leaf(self, path):
@@ -475,7 +475,7 @@ class Config(object):
         Note:
             It also returns False if node doesn't exist.
         """
-        self._config_source.set_level(self.get_level)
+        self._config_source.set_level(self.get_level())
         return self._config_source.is_leaf(path)
 
     def return_value(self, path, default=None):
