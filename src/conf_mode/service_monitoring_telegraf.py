@@ -26,6 +26,8 @@ from dozenos.configverify import verify_vrf
 from dozenos.ifconfig import Section
 from dozenos.template import render
 from dozenos.utils.convert import human_to_seconds
+from dozenos.utils.dict import dict_search
+from dozenos.utils.file import write_file_atomic
 from dozenos.utils.process import call
 from dozenos.utils.permission import chown
 from dozenos.utils.process import cmdl
@@ -36,6 +38,7 @@ airbag.enable()
 
 cache_dir = f'/etc/telegraf/.cache'
 config_telegraf = f'/run/telegraf/telegraf.conf'
+telegraf_env = '/run/telegraf/telegraf.env'
 custom_scripts_dir = '/etc/telegraf/custom_scripts'
 syslog_telegraf = '/etc/rsyslog.d/50-telegraf.conf'
 systemd_override = '/run/systemd/system/telegraf.service.d/10-override.conf'
@@ -80,11 +83,17 @@ def get_config(config=None):
     tmp = is_node_changed(conf, base + ['vrf'])
     if tmp: monitoring.update({'restart_required': {}})
 
+    # A reload keeps the old environment, a new token needs a restart
+    tmp = is_node_changed(conf, base + ['influxdb', 'authentication', 'token'])
+    if tmp:
+        monitoring.update({'restart_required': {}})
+
     # We have gathered the dict representation of the CLI, but there are default
     # options which we need to update into the dictionary retrieved.
     monitoring = conf.merge_defaults(monitoring, recursive=True)
 
     monitoring['custom_scripts_dir'] = custom_scripts_dir
+    monitoring['telegraf_env_file'] = telegraf_env
     monitoring['hostname'] = get_hostname()
     monitoring['interfaces_ethernet'] = Section.interfaces('ethernet', vlan=False)
     if conf.exists('firewall'):
@@ -266,7 +275,12 @@ def verify(monitoring):
 def generate(monitoring):
     if not monitoring:
         # Delete config and systemd files
-        config_files = [config_telegraf, systemd_override, syslog_telegraf]
+        config_files = [
+            config_telegraf,
+            telegraf_env,
+            systemd_override,
+            syslog_telegraf,
+        ]
         for file in config_files:
             if os.path.isfile(file):
                 os.unlink(file)
@@ -291,6 +305,15 @@ def generate(monitoring):
     render(config_telegraf, 'telegraf/telegraf.j2', monitoring, user='telegraf', group='telegraf')
     render(systemd_override, 'telegraf/override.conf.j2', monitoring)
     render(syslog_telegraf, 'telegraf/syslog_telegraf.j2', monitoring)
+
+    # Pass the InfluxDB token in an EnvironmentFile instead of Environment=,
+    # which any user can read via "systemctl show". Written atomically so the
+    # file is never readable by others.
+    token = dict_search('influxdb.authentication.token', monitoring)
+    if token:
+        write_file_atomic(telegraf_env, f'INFLUX_TOKEN={token}\n')
+    elif os.path.isfile(telegraf_env):
+        os.unlink(telegraf_env)
 
     return None
 

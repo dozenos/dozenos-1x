@@ -33,6 +33,7 @@ from dozenos.config import Config
 from dozenos.config import config_dict_merge
 from dozenos.configdict import get_dhcp_interfaces
 from dozenos.configdict import get_pppoe_interfaces
+from dozenos.configdict import get_wwan_interfaces
 from dozenos.defaults import frr_debug_enable
 from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_set_nested
@@ -40,6 +41,7 @@ from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
 from dozenos.utils.process import rc_cmd
 from dozenos.template import get_dhcp_router
+from dozenos.template import get_wwan_router
 from dozenos.template import render_to_string
 from dozenos import ConfigError
 
@@ -578,7 +580,7 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                                   no_tag_node_value_mangle=True)
         dict.update({'static' : static})
     elif conf.exists_effective(static_cli_path):
-        # Use a copy - static.dhcp/static.pppoe below may be merged in,
+        # Use a copy - static.dhcp/static.pppoe/static.wwan below may be merged in,
         # and deleted_protocol is shared by reference with other protocols
         dict.update({'static' : deleted_protocol.copy()})
 
@@ -601,10 +603,14 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
     tmp = get_pppoe_interfaces(conf)
     if tmp: dict_set_nested('static.pppoe', tmp, dict)
 
+    tmp = get_wwan_interfaces(conf)
+    if tmp:
+        dict_set_nested('static.wwan', tmp, dict)
+
     # T6991/T9054: "protocols static" may have been deleted while a DHCP or
     # PPPoE interface still contributes a default route - in that case the
     # static section must still be rendered, so drop the deletion marker
-    if 'static' in dict and ('dhcp' in dict['static'] or 'pppoe' in dict['static']):
+    if 'static' in dict and any(k in dict['static'] for k in ('dhcp', 'pppoe', 'wwan')):
         dict['static'].pop('deleted', None)
 
     # keep a re-usable list of dependent VRFs
@@ -742,7 +748,7 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
                                               no_tag_node_value_mangle=True)
                 dict_set_nested(f'{protocol_dict_path}.static', static, vrf)
             elif conf.exists_effective(static_vrf_path):
-                # Use a copy - static.dhcp/static.pppoe below may be merged in,
+                # Use a copy - static.dhcp/static.pppoe/static.wwan below may be merged in,
                 # and deleted_protocol is shared by reference with other protocols
                 dict_set_nested(f'{protocol_dict_path}.static', deleted_protocol.copy(), vrf)
 
@@ -753,12 +759,16 @@ def get_frrender_dict(conf: Config, argv=None) -> dict:
             tmp = get_pppoe_interfaces(conf, vrf_name)
             if tmp: dict_set_nested(f'name.{vrf_name}.protocols.static.pppoe', tmp, vrf)
 
+            tmp = get_wwan_interfaces(conf, vrf_name)
+            if tmp:
+                dict_set_nested(f'name.{vrf_name}.protocols.static.wwan', tmp, vrf)
+
             # T6991/T9054: "protocols static" may have been deleted while a
             # DHCP or PPPoE interface still contributes a default route - in
             # that case the static section must still be rendered, so drop
             # the deletion marker
             static_dict = dict_search(f'{protocol_dict_path}.static', vrf)
-            if static_dict and ('dhcp' in static_dict or 'pppoe' in static_dict):
+            if static_dict and any(k in static_dict for k in ('dhcp', 'pppoe', 'wwan')):
                 static_dict.pop('deleted', None)
 
             vrf_vni_path = ['vrf', 'name', vrf_name, 'vni']
@@ -857,10 +867,31 @@ def get_dhcp_route_interfaces(config_dict) -> set:
 
     return interfaces
 
+
+def get_wwan_route_interfaces(config_dict) -> set:
+    """Collect all WWAN interfaces whose default route is derived from the
+    gateway of their bearer, which is read by the "get_wwan_router" Jinja
+    filter and thus changes independently of the CLI configuration.
+    """
+    interfaces = set()
+    if not isinstance(config_dict, dict):
+        return interfaces
+
+    static = config_dict.get('static')
+    if isinstance(static, dict):
+        interfaces.update(static.get('wwan', {}))
+    for vrf_name in dict_search('vrf.name', config_dict) or {}:
+        static = dict_search(f'vrf.name.{vrf_name}.protocols.static', config_dict)
+        if isinstance(static, dict):
+            interfaces.update(static.get('wwan', {}))
+
+    return interfaces
+
 class FRRender:
     # Configuration of the last successful apply(), see generate()
     cached_config_dict = {}
     cached_dhcp_gateways = {}
+    cached_wwan_gateways = {}
     def __init__(self):
         self._frr_conf = frr_config_file
         # Configuration rendered by generate(), which apply() has not
@@ -886,6 +917,14 @@ class FRRender:
             for interface in get_dhcp_route_interfaces(config_dict)
         }
 
+        wwan_gateways = {
+            interface: (
+                get_wwan_router(interface, 'ipv4'),
+                get_wwan_router(interface, 'ipv6'),
+            )
+            for interface in get_wwan_route_interfaces(config_dict)
+        }
+
         # A render which did not reach apply() must not count as applied
         self._pending = None
 
@@ -895,6 +934,7 @@ class FRRender:
         if (
             self.cached_config_dict == config_dict
             and self.cached_dhcp_gateways == dhcp_gateways
+            and self.cached_wwan_gateways == wwan_gateways
             and read_file(self._frr_conf, None)
             == read_file(frr_applied_config_file, None)
         ):
@@ -1044,7 +1084,7 @@ class FRRender:
         # Only apply() makes this the cached configuration. If FRR does not
         # take it, the next commit must render and apply it again instead of
         # reporting no changes (T9442).
-        self._pending = (config_dict, dhcp_gateways)
+        self._pending = (config_dict, dhcp_gateways, wwan_gateways)
         return True
 
     def apply(self, count_max=5):
@@ -1097,4 +1137,8 @@ class FRRender:
         # FRR runs the rendered configuration now, remember it for the change
         # detection of generate()
         if pending is not None:
-            self.cached_config_dict, self.cached_dhcp_gateways = pending
+            (
+                self.cached_config_dict,
+                self.cached_dhcp_gateways,
+                self.cached_wwan_gateways,
+            ) = pending
