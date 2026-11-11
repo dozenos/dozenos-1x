@@ -304,3 +304,8 @@ systemctl enable dozenos-dhclient-lease-watch.timer
 if [ -d /run/systemd/system ]; then
     systemctl start dozenos-dhclient-lease-watch.timer
 fi
+
+# Set the SUID bit on the runner
+# so that it can have the prigilege to run commands as root.
+# Permissions will be enforced at the DozenOS command level.
+chmod u+s /usr/bin/dozenos-op-run
