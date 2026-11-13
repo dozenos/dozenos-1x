@@ -29,7 +29,6 @@ from syslog import LOG_INFO
 from dozenos.configquery import ConfigTreeQuery
 from dozenos.configdict import get_interface_dict
 from dozenos.utils.commit import wait_for_commit_lock
-from dozenos.utils.process import call
 from dozenos.utils.vti_updown_db import open_vti_updown_db_for_create_or_update
 
 def supply_interface_dict(interface):

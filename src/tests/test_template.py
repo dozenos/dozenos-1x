@@ -123,7 +123,7 @@ class TestDozenOSTemplate(TestCase):
         self.assertTrue(dozenos.template.is_ip_network('2001:db8::/48'))
         self.assertTrue(dozenos.template.is_ip_network('2001:db8:1000::/64'))
 
-    def test_is_network(self):
+    def test_compare_netmask(self):
         self.assertTrue(dozenos.template.compare_netmask('10.0.0.0/8', '20.0.0.0/8'))
         self.assertTrue(dozenos.template.compare_netmask('10.0.0.0/16', '20.0.0.0/16'))
         self.assertFalse(dozenos.template.compare_netmask('10.0.0.0/8', '20.0.0.0/16'))

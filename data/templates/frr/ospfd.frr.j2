@@ -211,8 +211,12 @@ router ospf {{ 'vrf ' ~ vrf if vrf is dozenos_defined }}
 {% if parameters.abr_type is dozenos_defined %}
  ospf abr-type {{ parameters.abr_type }}
 {% endif %}
-{% if parameters.rfc1583_compatibility is dozenos_defined %}
+{% if compatible.rfc1583 is dozenos_defined %}
  compatible rfc1583
+{% endif %}
+{# FRR enables RFC7474 by default and only prints the "no" form #}
+{% if compatible.rfc7474 is not dozenos_defined %}
+ no compatible rfc7474
 {% endif %}
 {% if parameters.router_id is dozenos_defined %}
  ospf router-id {{ parameters.router_id }}
