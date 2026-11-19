@@ -33,7 +33,6 @@ from os import readlink
 from os import getpid
 from os import getppid
 from os import sync
-from json import loads
 from json import dumps
 from typing import Union
 from urllib.parse import urlparse
@@ -43,12 +42,13 @@ from errno import ENOSPC
 from psutil import disk_partitions
 
 from dozenos.base import Warning
+from dozenos.config import Config
+from dozenos.configsource import ConfigSourceString
 from dozenos.configtree import ConfigTree
 from dozenos.config_mgmt import unsaved_commits
 from dozenos.defaults import base_dir
 from dozenos.defaults import directories
 from dozenos.defaults import activation_hint
-from dozenos.defaults import KDUMP_DEFAULT_MEMORY_AUTO
 from dozenos.flavor import get_image_serial_console
 from dozenos.remote import download
 from dozenos.system import disk
@@ -64,10 +64,10 @@ from dozenos.utils.auth import EPasswdStrength
 from dozenos.utils.auth import evaluate_strength
 from dozenos.utils.auth import get_local_users
 from dozenos.utils.auth import get_user_home_dir
-from dozenos.utils.dict import dict_search
 from dozenos.utils.io import ask_input
 from dozenos.utils.io import ask_yes_no
 from dozenos.utils.io import select_entry
+from dozenos.utils.kernel import get_kernel_cmdline_options
 from dozenos.utils.file import chmod_2775
 from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
@@ -528,89 +528,18 @@ def setup_grub(root_dir: str) -> None:
     render(grub_cfg_options, grub.TMPL_GRUB_OPTS, {})
 
 def get_cli_kernel_options(config_file: str) -> list:
-    config = ConfigTree(read_file(config_file))
-    config_dict = loads(config.to_json())
-    cmdline_options = []
+    # Read the config like conf-mode does (key mangling, recursive defaults)
+    # so the GRUB cmdline matches what system_option.py expects on first boot
+    config_text = read_file(config_file)
+    config = Config(config_source=ConfigSourceString(
+        running_config_text=config_text, session_config_text=config_text))
 
-    options = dict_search('system.option', config_dict)
-    if options is None:
-        return cmdline_options
-    kernel_options = options.get('kernel', {})
-
-    k_cpu_opts = kernel_options.get('cpu', {})
-    k_memory_opts = kernel_options.get('memory', {})
-
-    # XXX: This code path and if statements must be kept in sync with the Kernel
-    # option handling in system_options.py:generate(). This occurrence is used
-    # for having the appropriate options passed to GRUB after an image upgrade!
-    if 'disable-mitigations' in kernel_options:
-        cmdline_options.append('mitigations=off')
-    if 'disable-power-saving' in kernel_options:
-        cmdline_options.append('intel_idle.max_cstate=0 processor.max_cstate=1')
-    if 'amd-pstate-driver' in kernel_options:
-        mode = kernel_options['amd-pstate-driver']
-        cmdline_options.append(
-            f'initcall_blacklist=acpi_cpufreq_init amd_pstate={mode}')
-    if 'quiet' in kernel_options:
-        cmdline_options.append('quiet')
-
-    # Early reboot on kernel panic via kernel cmdline (must match system_option.py)
-    if dict_search('system.option.reboot-on-panic', config_dict) is not None:
-        cmdline_options.append('panic=60')
-
-    if 'disable-hpet' in kernel_options:
-        cmdline_options.append('hpet=disable')
-
-    if 'disable-mce' in kernel_options:
-        cmdline_options.append('mce=off')
-
-    if 'disable-softlockup' in kernel_options:
-        cmdline_options.append('nosoftlockup')
-
-    # CPU options
-    isol_cpus = k_cpu_opts.get('isolate-cpus')
-    if isol_cpus:
-        cmdline_options.append(f'isolcpus={isol_cpus}')
-
-    nohz_full = k_cpu_opts.get('nohz-full')
-    if nohz_full:
-        cmdline_options.append(f'nohz_full={nohz_full}')
-
-    rcu_nocbs = k_cpu_opts.get('rcu-no-cbs')
-    if rcu_nocbs:
-        cmdline_options.append(f'rcu_nocbs={rcu_nocbs}')
-
-    if 'disable-nmi-watchdog' in k_cpu_opts:
-        cmdline_options.append('nmi_watchdog=0')
-
-    # Memory options
-    if 'disable-numa-balancing' in k_memory_opts:
-        cmdline_options.append('numa_balancing=disable')
-
-    default_hp_size = k_memory_opts.get('default-hugepage-size')
-    if default_hp_size:
-        cmdline_options.append(f'default_hugepagesz={default_hp_size}')
-
-    hp_sizes = k_memory_opts.get('hugepage-size')
-    if hp_sizes:
-        for size, settings in hp_sizes.items():
-            cmdline_options.append(f'hugepagesz={size}')
-            count = settings.get('hugepage-count')
-            if count:
-                cmdline_options.append(f'hugepages={count}')
-
-    # Crash kernel memory reservation for the capture kernel
-    kdump_memory = options.get('kdump', {}).get('memory')
-    if kdump_memory:
-        if kdump_memory == 'auto':
-            # Tiered auto-sizing based on total system RAM
-            kdump_memory = KDUMP_DEFAULT_MEMORY_AUTO
-        else:
-            # Append suffix (megabytes) to right format
-            kdump_memory = f'{kdump_memory}M'
-        cmdline_options.append(f'crashkernel={kdump_memory}')
-
-    return cmdline_options
+    base = ['system', 'option']
+    options = config.get_config_dict(base, key_mangling=('-', '_'),
+                                     get_first_key=True,
+                                     with_recursive_defaults=True)
+    return get_kernel_cmdline_options(
+        options, kdump_enabled=config.exists(base + ['kdump']))
 
 def configure_authentication(config_file: str, password: str) -> None:
     """Write encrypted password to config file
