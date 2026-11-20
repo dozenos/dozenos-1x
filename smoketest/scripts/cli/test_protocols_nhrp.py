@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import unittest
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
+from base_dozenostest_shim import wrapped_error_regex
 from dozenos.configsession import ConfigSessionError
 from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
@@ -27,12 +27,6 @@ tunnel_path = ['interfaces', 'tunnel']
 nhrp_path = ['protocols', 'nhrp']
 vpn_path = ['vpn', 'ipsec']
 PROCESS_NAME = 'nhrpd'
-
-
-def wrapped_error_regex(message):
-    # Commit errors are line-wrapped when printed, so build a regex that
-    # matches the message across arbitrary whitespace including newlines
-    return r'\s+'.join(re.escape(word) for word in message.split())
 
 
 class TestProtocolsNHRP(DozenOSUnitTestSHIM.TestCase):
