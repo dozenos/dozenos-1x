@@ -21,8 +21,6 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
 from dozenos.ifconfig import Section
-from dozenos.utils.process import process_named_running
-from dozenos.frrender import isis_daemon
 
 base_path = ['protocols', 'isis']
 domain = 'DozenOS'
@@ -34,8 +32,6 @@ class TestProtocolsISIS(DozenOSUnitTestSHIM.TestCase):
         cls._interfaces = Section.interfaces('ethernet')
         # call base-classes classmethod
         super(TestProtocolsISIS, cls).setUpClass()
-        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(isis_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -48,9 +44,6 @@ class TestProtocolsISIS(DozenOSUnitTestSHIM.TestCase):
         # life as hard as possible
         self.cli_delete(base_path)
         self.cli_commit()
-
-        # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(isis_daemon))
         # always forward to base class
         super().tearDown()
 

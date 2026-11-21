@@ -20,10 +20,8 @@ import unittest
 
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 from dozenos.configsession import ConfigSessionError
-from dozenos.frrender import mgmt_daemon
 from dozenos.utils.file import read_file
 from dozenos.utils.process import cmdl
-from dozenos.utils.process import process_named_running
 from dozenos.xml_ref import default_value
 
 config_file = '/etc/frr/daemons'
@@ -241,8 +239,8 @@ class TestSystemFRR(DozenOSUnitTestSHIM.TestCase):
                 self.cli_commit()
         finally:
             cmdl(['systemctl', 'start', 'frr.service'], sudo=True)
-            # restarted on purpose, see base class tearDown()
-            self.__class__.mgmt_daemon_pid = process_named_running(mgmt_daemon)
+            # restarted on purpose, see base class setUp()
+            self.refresh_frr_daemon_pids()
 
         # FRR starts with the previously applied configuration
         frrconfig = self.getFRRconfig()

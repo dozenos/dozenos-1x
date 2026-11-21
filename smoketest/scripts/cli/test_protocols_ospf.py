@@ -22,9 +22,7 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.configsession import ConfigSessionError
 from dozenos.ifconfig import Section
-from dozenos.frrender import ospf_daemon
 from dozenos.utils.file import read_file
-from dozenos.utils.process import process_named_running
 from dozenos.xml_ref import default_value
 
 base_path = ['protocols', 'ospf']
@@ -36,9 +34,6 @@ class TestProtocolsOSPF(DozenOSUnitTestSHIM.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TestProtocolsOSPF, cls).setUpClass()
-
-        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(ospf_daemon)
 
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '10', 'action', 'permit'])
         cls.cli_set(cls, ['policy', 'route-map', route_map, 'rule', '20', 'action', 'permit'])
@@ -60,9 +55,6 @@ class TestProtocolsOSPF(DozenOSUnitTestSHIM.TestCase):
 
         frrconfig = self.getFRRconfig('router ospf', stop_section='^exit')
         self.assertNotIn(f'router ospf', frrconfig)
-
-        # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(ospf_daemon))
         # always forward to base class
         super().tearDown()
 

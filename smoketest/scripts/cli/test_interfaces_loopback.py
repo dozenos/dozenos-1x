@@ -22,9 +22,7 @@ from base_interfaces_test import BasicInterfaceTest
 from base_interfaces_test import MSG_TESTCASE_UNSUPPORTED
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
-from dozenos.frrender import mgmt_daemon
 from dozenos.utils.network import is_intf_addr_assigned
-from dozenos.utils.process import process_named_running
 
 loopbacks = ['127.0.0.1', '::1']
 
@@ -47,8 +45,7 @@ class LoopbackInterfaceTest(BasicInterfaceTest.TestCase):
         for intf in self._interfaces:
             self.assertIn(intf, interfaces())
 
-        # check process health and continuity
-        self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
+        self.verify_frr_daemon_pids()
 
     def test_add_single_ip_address(self):
         super().test_add_single_ip_address()

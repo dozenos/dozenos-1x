@@ -31,7 +31,6 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 from dozenos.configsession import ConfigSessionError
 from dozenos.ethtool import Ethtool
 from dozenos.netlink import coalesce
-from dozenos.frrender import mgmt_daemon
 from dozenos.ifconfig import Section
 from dozenos.ifconfig.interface import Interface
 from dozenos.utils.file import read_file
@@ -40,7 +39,6 @@ from dozenos.utils.network import interface_exists
 from dozenos.utils.network import is_intf_addr_assigned
 from dozenos.utils.network import is_ipv6_link_local
 from dozenos.utils.process import cmdl
-from dozenos.utils.process import process_named_running
 from dozenos.utils.process import popen
 
 class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
@@ -89,8 +87,7 @@ class EthernetInterfaceTest(BasicInterfaceTest.TestCase):
             ]
             self.assertListEqual(tmp, [])
 
-        # check process health and continuity
-        self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
+        self.verify_frr_daemon_pids()
 
     def test_offloading_rps(self):
         # enable RPS on all available CPUs, RPS works with a CPU bitmask,

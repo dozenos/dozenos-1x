@@ -21,9 +21,7 @@ from base_dozenostest_shim import DozenOSUnitTestSHIM
 from base_dozenostest_shim import wrapped_error_regex
 
 from dozenos.configsession import ConfigSessionError
-from dozenos.frrender import bgp_daemon
 from dozenos.utils.file import read_file
-from dozenos.utils.process import process_named_running
 
 base_path = ['protocols', 'rpki']
 base_frr_config_args = {'start_section': 'rpki', 'stop_section': '^exit'}
@@ -113,8 +111,6 @@ class TestProtocolsRPKI(DozenOSUnitTestSHIM.TestCase):
     def setUpClass(cls):
         # call base-classes classmethod
         super(TestProtocolsRPKI, cls).setUpClass()
-        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(bgp_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -130,9 +126,6 @@ class TestProtocolsRPKI(DozenOSUnitTestSHIM.TestCase):
 
         frrconfig = self.getFRRconfig(**vrf_frr_config_args)
         self.assertNotIn(f'rpki', frrconfig)
-
-        # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(bgp_daemon))
         # always forward to base class
         super().tearDown()
 

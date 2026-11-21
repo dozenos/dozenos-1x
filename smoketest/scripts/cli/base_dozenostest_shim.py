@@ -26,13 +26,34 @@ from typing import Type
 from dozenos import ConfigError
 from dozenos.configsession import ConfigSession
 from dozenos.configsession import ConfigSessionError
+from dozenos.frrender import babel_daemon
+from dozenos.frrender import bfd_daemon
+from dozenos.frrender import bgp_daemon
+from dozenos.frrender import isis_daemon
+from dozenos.frrender import ldpd_daemon
 from dozenos.frrender import mgmt_daemon
+from dozenos.frrender import nhrp_daemon
+from dozenos.frrender import openfabric_daemon
+from dozenos.frrender import ospf_daemon
+from dozenos.frrender import ospf6_daemon
+from dozenos.frrender import pim6_daemon
+from dozenos.frrender import rip_daemon
+from dozenos.frrender import ripng_daemon
+from dozenos.frrender import zebra_daemon
 from dozenos.utils.commit import commit_in_progress2
 from dozenos.utils.network import get_vrf_pids
 from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 
 save_config = '/tmp/dozenos-smoketest-save'
+
+# FRR daemons which must always run and are not allowed to crash during a test,
+# thus their PIDs must remain the same. staticd and pathd have no dozenos.frrender
+# constant. pimd is left out as it is started and stopped by "protocols pim".
+frr_daemons = [babel_daemon, bfd_daemon, bgp_daemon, isis_daemon, ldpd_daemon,
+               mgmt_daemon, nhrp_daemon, openfabric_daemon, ospf_daemon,
+               ospf6_daemon, pim6_daemon, rip_daemon, ripng_daemon,
+               zebra_daemon, 'staticd', 'pathd']
 
 # This class acts as shim between individual Smoketests developed for DozenOS and
 # the Python UnitTest framework. Before every test is loaded, we dump the current
@@ -48,7 +69,6 @@ class DozenOSUnitTestSHIM:
         # This is useful to grab all the commands required to trigger the
         # certain failure condition.
         debug = False
-        mgmt_daemon_pid = 0
         smoketest_hint_file = '/tmp/dozenos.smoketests.hint'
 
         @staticmethod
@@ -64,10 +84,6 @@ class DozenOSUnitTestSHIM:
             cls._session = ConfigSession(os.getpid())
             cls._session.save_config(save_config)
             cls.debug = cls.debug_on()
-
-            # Retrieve FRR mgmtd daemon PID - it is not allowed to crash, thus
-            # PID must remain the same
-            cls.mgmt_daemon_pid = process_named_running(mgmt_daemon)
 
         @classmethod
         def tearDownClass(cls):
@@ -92,11 +108,26 @@ class DozenOSUnitTestSHIM:
                     os.remove(save_config)
 
         def setUp(self):
-            pass
+            self.refresh_frr_daemon_pids()
 
         def tearDown(self):
-            # check process health and continuity
-            self.assertEqual(self.mgmt_daemon_pid, process_named_running(mgmt_daemon))
+            self.verify_frr_daemon_pids()
+
+        @staticmethod
+        def _get_frr_daemon_pids() -> dict:
+            return {daemon: process_named_running(daemon) for daemon in frr_daemons}
+
+        def refresh_frr_daemon_pids(self):
+            """ Take the FRR daemon PID baseline, all daemons must be running.
+            Call again after a test restarted FRR on purpose. """
+            self.frr_daemon_pids = self._get_frr_daemon_pids()
+            not_running = [d for d, pid in self.frr_daemon_pids.items() if pid is None]
+            if not_running:
+                self.fail(f'FRR daemons not running: {", ".join(not_running)}')
+
+        def verify_frr_daemon_pids(self):
+            """ Check FRR process health and continuity """
+            self.assertDictEqual(self.frr_daemon_pids, self._get_frr_daemon_pids())
 
         @staticmethod
         def _wait_for_commit_lock():

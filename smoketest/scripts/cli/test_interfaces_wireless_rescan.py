@@ -44,6 +44,7 @@ class WirelessRescanTest(DozenOSUnitTestSHIM.TestCase):
     ifname = 'wlan99'
 
     def setUp(self):
+        super().setUp()
         phys = sorted(os.path.basename(p)
                       for p in glob('/sys/class/ieee80211/*'))
         if not phys:

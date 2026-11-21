@@ -20,8 +20,6 @@ import unittest
 from base_dozenostest_shim import DozenOSUnitTestSHIM
 
 from dozenos.ifconfig import Section
-from dozenos.frrender import babel_daemon
-from dozenos.utils.process import process_named_running
 from dozenos.xml_ref import default_value
 
 base_path = ['protocols', 'babel']
@@ -32,8 +30,6 @@ class TestProtocolsBABEL(DozenOSUnitTestSHIM.TestCase):
         cls._interfaces = Section.interfaces('ethernet', vlan=False)
         # call base-classes classmethod
         super(TestProtocolsBABEL, cls).setUpClass()
-        # Retrieve FRR daemon PID - it is not allowed to crash, thus PID must remain the same
-        cls.daemon_pid = process_named_running(babel_daemon)
         # ensure we can also run this test on a live system - so lets clean
         # out the current configuration :)
         cls.cli_delete(cls, base_path)
@@ -47,9 +43,6 @@ class TestProtocolsBABEL(DozenOSUnitTestSHIM.TestCase):
         self.cli_delete(['policy', 'prefix-list'])
         self.cli_delete(['policy', 'prefix-list6'])
         self.cli_commit()
-
-        # check process health and continuity
-        self.assertEqual(self.daemon_pid, process_named_running(babel_daemon))
         # always forward to base class
         super().tearDown()
 
