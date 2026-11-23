@@ -28,6 +28,7 @@ from dozenos.configverify import verify_interface_exists
 from dozenos.defaults import nft_time_refresh
 from dozenos.ethtool import Ethtool
 from dozenos.firewall import fqdn_config_parse
+from dozenos.firewall import parse_weekdays
 from dozenos.geoip import geoip_refresh, geoip_update
 from dozenos.template import render
 from dozenos.utils.convert import human_to_seconds
@@ -268,6 +269,12 @@ def verify_rule(firewall, family, hook, priority, rule_id, rule_conf):
             verify_jump_target(firewall, hook, target, family, recursive=True)
         else:
             verify_jump_target(firewall, hook, target, family, recursive=False)
+
+    if 'weekdays' in rule_conf.get('time', {}):
+        try:
+            parse_weekdays(rule_conf['time']['weekdays'])
+        except ValueError as e:
+            raise ConfigError(f'{rule_num}{e}')
 
     if rule_conf['action'] == 'offload':
         if 'offload_target' not in rule_conf:

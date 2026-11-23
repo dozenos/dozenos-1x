@@ -59,7 +59,7 @@ def flush_cache(direction):
         raise ValueError()
     tmp = run(f'{conntrackd_bin} -C {conntrackd_config} -f {direction}')
     if tmp > 0:
-        raise dozenos.opmode.Error('Failed to clear {direction} cache')
+        raise dozenos.opmode.Error(f'Failed to clear {direction} cache')
 
 def get_formatted_output(data):
     data_entries = []

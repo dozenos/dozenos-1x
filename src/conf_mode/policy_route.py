@@ -32,6 +32,7 @@ from dozenos.utils.process import run
 from dozenos.utils.network import get_vrf_tableid
 from dozenos.utils.network import interface_exists
 from dozenos.defaults import nft_time_refresh
+from dozenos.firewall import parse_weekdays
 from dozenos.defaults import rt_global_table
 from dozenos.defaults import rt_global_vrf
 from dozenos.defaults import user_mark_mask
@@ -107,6 +108,12 @@ def get_config(config=None):
     return policy
 
 def verify_rule(policy, name, rule_conf, ipv6, rule_id):
+    if 'weekdays' in rule_conf.get('time', {}):
+        try:
+            parse_weekdays(rule_conf['time']['weekdays'])
+        except ValueError as e:
+            raise ConfigError(f'{name} rule {rule_id}: {e}')
+
     icmp = 'icmp' if not ipv6 else 'icmpv6'
     if icmp in rule_conf:
         icmp_defined = False
