@@ -36,6 +36,7 @@ from dozenos.utils.process import rc_cmd
 from dozenos.utils.process import call
 from dozenos.utils.process import cmdl
 from dozenos.utils.file import get_name_from_path
+from dozenos.utils.file import chmod_600
 from dozenos.remote import upload
 
 
@@ -231,6 +232,9 @@ def __generate_archived_files(location_path: str) -> None:
             # worth more than no /etc at all
             Warning(f'Unable to read `{path}` to archive files: {e}')
             continue  # skip paths we can't read
+        else:
+            # The archive may contain private data, so save it to a secure file
+            chmod_600(archive_file)
 
 
 def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
@@ -245,6 +249,8 @@ def __generate_main_archive_file(archive_file: str, tmp_dir_path: str) -> None:
     arcname = get_name_from_path(archive_file)
     with tar_open(name=archive_file, mode='x:gz') as tar_file:
         tar_file.add(tmp_dir_path, arcname=arcname)
+    # The archive may contain private data, so save it to a secure file
+    chmod_600(archive_file)
 
 def __generate_topology_snapshots(output_dir: Path) -> None:
     """

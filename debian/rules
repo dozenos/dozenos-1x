@@ -189,6 +189,8 @@ override_dh_auto_install:
 	cp $(OCAML_DIR)/bin/vyconfd $(DIR_LIBDOZENOSCONFIG)/$(VYCONF)
 	cp $(OCAML_DIR)/bin/vyconf_cli $(DIR_LIBDOZENOSCONFIG)/$(VYCONF)
 	cp $(OCAML_DIR)/bin/vyconf_cli_compat $(DIR_LIBDOZENOSCONFIG)/$(VYCONF_BIN)
+	cp $(OCAML_DIR)/bin/list_reference_path $(DIR)/$(DOZENOS_LIBEXEC_DIR)/completion
+	cp $(OCAML_DIR)/bin/reference-path $(DIR)/$(DOZENOS_LIBEXEC_DIR)/validators
 	cp libdozenosconfig/_build/libdozenosconfig.so $(DIR_LIBDOZENOSCONFIG)/$(DOZENOS_LIB_DIR)/libdozenosconfig.so.0
 
 	# OCaml binaries from former dozenos-utils package

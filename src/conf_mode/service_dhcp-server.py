@@ -19,12 +19,12 @@ import re
 from sys import exit
 from sys import argv
 
-from glob import glob
 from ipaddress import ip_address
 from ipaddress import ip_network
 from netaddr import IPRange
 
 from dozenos.config import Config
+from dozenos.kea import kea_fix_data_dir
 from dozenos.kea import kea_test_config
 from dozenos.pki import wrap_certificate
 from dozenos.pki import wrap_private_key
@@ -32,10 +32,7 @@ from dozenos.template import render
 from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_search_args
 from dozenos.utils.dict import dict_search_recursive
-from dozenos.utils.file import chmod_775
-from dozenos.utils.file import makedir
 from dozenos.utils.file import write_file
-from dozenos.utils.permission import chown
 from dozenos.utils.process import call
 from dozenos.utils.network import interface_exists
 from dozenos.utils.network import is_subnet_connected
@@ -49,7 +46,6 @@ ctrl_socket = ''
 config_file = ''
 config_file_d2 = ''
 lease_file = ''
-lease_file_glob = ''
 
 ca_cert_file = ''
 cert_file = ''
@@ -62,14 +58,13 @@ def _override_for_vrf(vrf_name):
     """
     This function is intended to override global vars when vrf is enabled
     """
-    global ctrl_socket, config_file, config_file_d2, lease_file, lease_file_glob
+    global ctrl_socket, config_file, config_file_d2, lease_file
     global ca_cert_file, cert_file, cert_key_file
 
     ctrl_socket = f'/run/kea/dhcp4-{vrf_name}-ctrl-socket'
     config_file = f'/run/kea/kea-{vrf_name}-dhcp4.conf'
     config_file_d2 = f'/run/kea/kea-{vrf_name}-dhcp-ddns.conf'
     lease_file = f'/config/dhcp/dhcp4-{vrf_name}-leases.csv'
-    lease_file_glob = f'/config/dhcp/dhcp4-{vrf_name}-leases*'
 
     ca_cert_file = f'/run/kea/kea-{vrf_name}-failover-ca.pem'
     cert_file = f'/run/kea/kea-{vrf_name}-failover.pem'
@@ -80,14 +75,13 @@ def _reset_vars():
     """
     This function is intended to reset global vars when vrf is not enabled
     """
-    global ctrl_socket, config_file, config_file_d2, lease_file, lease_file_glob
+    global ctrl_socket, config_file, config_file_d2, lease_file
     global ca_cert_file, cert_file, cert_key_file
 
     ctrl_socket = '/run/kea/dhcp4-ctrl-socket'
     config_file = '/run/kea/kea-dhcp4.conf'
     config_file_d2 = '/run/kea/kea-dhcp-ddns.conf'
     lease_file = '/config/dhcp/dhcp4-leases.csv'
-    lease_file_glob = '/config/dhcp/dhcp4-leases*'
 
     ca_cert_file = '/run/kea/kea-failover-ca.pem'
     cert_file = '/run/kea/kea-failover.pem'
@@ -632,19 +626,11 @@ def generate(dhcp):
     dhcp['lease_file'] = lease_file
     dhcp['machine'] = os.uname().machine
 
-    # Create directory for lease file if necessary
-    lease_dir = os.path.dirname(lease_file)
-    if not os.path.isdir(lease_dir):
-        makedir(lease_dir, group='vyattacfg')
-        chmod_775(lease_dir)
-
-    # Ensure correct permissions on lease files + backups
-    for file in glob(lease_file_glob):
-        chown(file, user=user_group, group='vyattacfg')
+    kea_fix_data_dir(os.path.dirname(lease_file), user=user_group)
 
     # Create lease file if necessary and let kea own it - 'kea-lfc' expects it that way
     if not os.path.exists(lease_file):
-        write_file(lease_file, '', user=user_group, group=user_group, mode=0o644)
+        write_file(lease_file, '', user=user_group, group='vyattacfg', mode=0o644)
 
     for f in [cert_file, cert_key_file, ca_cert_file]:
         if os.path.exists(f):

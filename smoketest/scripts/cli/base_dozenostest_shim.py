@@ -42,6 +42,7 @@ from dozenos.frrender import ripng_daemon
 from dozenos.frrender import zebra_daemon
 from dozenos.utils.commit import commit_in_progress2
 from dozenos.utils.network import get_vrf_pids
+from dozenos.utils.network import interface_exists
 from dozenos.utils.process import cmdl
 from dozenos.utils.process import process_named_running
 
@@ -84,6 +85,11 @@ class DozenOSUnitTestSHIM:
             cls._session = ConfigSession(os.getpid())
             cls._session.save_config(save_config)
             cls.debug = cls.debug_on()
+
+            # Name of an ethernet interface with no NIC behind it, for tests that
+            # commit configuration referencing a missing NIC
+            cls.missing_ethernet = next(f'eth{i}' for i in range(99, 1000)
+                                        if not interface_exists(f'eth{i}'))
 
         @classmethod
         def tearDownClass(cls):

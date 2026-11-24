@@ -17,6 +17,7 @@ import os
 
 from sys import exit
 
+from dozenos.base import Warning
 from dozenos.config import Config
 from dozenos.configdep import set_dependents, call_dependents
 from dozenos.utils.dict import dict_search_args

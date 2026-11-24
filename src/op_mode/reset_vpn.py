@@ -49,7 +49,7 @@ def reset_conn(protocol: str, username: typing.Optional[str] = None,
                                             'all',
                                             ''))
     else:
-        dozenos.opmode.IncorrectValue('Unknown VPN Protocol, aborting')
+        raise dozenos.opmode.IncorrectValue('Unknown VPN Protocol, aborting')
 
 
 if __name__ == '__main__':
