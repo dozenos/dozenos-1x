@@ -30,6 +30,7 @@ from dozenos.base import Warning
 from dozenos.config import Config, config_dict_merge
 from dozenos.configdep import set_dependents
 from dozenos.configdep import call_dependents
+from dozenos.defaults import vpp_failure_handler_marker
 from dozenos.configdict import node_changed, is_member, is_node_changed
 from dozenos.configverify import verify_interface_exists
 from dozenos.configverify import verify_virtual_interface_exists
@@ -78,6 +79,8 @@ airbag.enable()
 service_name = 'vpp'
 service_conf = Path(f'/run/vpp/{service_name}.conf')
 systemd_override = '/run/systemd/system/vpp.service.d/10-override.conf'
+# Marker present while the failure handler's commit deletes 'vpp'
+failure_handler_marker = Path(vpp_failure_handler_marker)
 
 try:
     vpp_log = getLogger(
@@ -327,7 +330,10 @@ def get_config(config=None):
     base = ['vpp']
     base_settings = ['vpp', 'settings']
 
-    if is_node_changed(
+    # Re-run the Prometheus config when per-node counters change, but not
+    # during the failure handler's reset: the exporter's verify would fail its
+    # delete commit, and systemd restarts the exporter along with VPP anyway
+    if not failure_handler_marker.exists() and is_node_changed(
         conf,
         base_settings + ['resource-allocation', 'memory', 'stats', 'per-node-counters'],
     ):
@@ -621,6 +627,11 @@ def get_config(config=None):
 
 
 def verify(config):
+    # The failure handler re-adds the same 'vpp' section in its next commit;
+    # the checks below only guard a user-initiated removal.
+    if 'remove' in config and failure_handler_marker.exists():
+        return None
+
     if 'remove' in config and config.get('vpp_exporter_configured'):
         raise ConfigError(
             'VPP cannot be removed while the VPP Prometheus exporter is configured. '

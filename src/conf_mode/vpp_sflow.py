@@ -39,6 +39,10 @@ def get_config(config=None) -> dict:
         with_recursive_defaults=True,
     )
 
+    if not conf.exists(['vpp']):
+        config['remove_vpp'] = True
+        return config
+
     # Get effective config as we need full dictionary for deletion
     effective_config = conf.get_config_dict(
         base,
@@ -82,7 +86,7 @@ def get_config(config=None) -> dict:
 
 
 def verify(config):
-    if 'remove' in config:
+    if 'remove' in config or 'remove_vpp' in config:
         return None
 
     # Check if interface section exists
@@ -110,6 +114,11 @@ def generate(config):
 
 
 def apply(config):
+    # VPP is stopped (or already dead) with the whole 'vpp' section, taking
+    # its sFlow state with it
+    if 'remove_vpp' in config:
+        return None
+
     s = SFlow()
 
     # Disable sFlow on deleted interface

@@ -22,12 +22,14 @@ import argparse
 import sys
 import os
 import grp
+from pathlib import Path
 
 from dozenos.configsession import ConfigSession
 from dozenos.config import Config
 from dozenos.configdiff import get_config_diff
 from dozenos.xml_ref import is_leaf
 from dozenos.utils.commit import wait_for_commit_lock
+from dozenos.defaults import vpp_failure_handler_marker
 
 
 CFG_GROUP = 'vyattacfg'
@@ -36,8 +38,12 @@ DEBUG = False
 
 def type_str_to_list(value):
     if isinstance(value, str):
-        return value.split()
-    raise argparse.ArgumentTypeError('path must be a whitespace separated string')
+        res = value.split()
+        if res:
+            return res
+    raise argparse.ArgumentTypeError(
+        'path must be a non-empty whitespace separated string'
+    )
 
 
 parser = argparse.ArgumentParser()
@@ -116,8 +122,15 @@ d = config.get_config_dict(path, effective=True, get_first_key=True)
 if in_session:
     session.discard()
 
-session.delete(path)
-session.commit()
+if path[0] == 'vpp':
+    Path(vpp_failure_handler_marker).touch()
+
+try:
+    session.delete(path)
+    session.commit()
+finally:
+    if path[0] == 'vpp':
+        Path(vpp_failure_handler_marker).unlink(missing_ok=True)
 
 if not d:
     # nothing more to do in either case of reload/rollback
