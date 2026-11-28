@@ -62,6 +62,7 @@ from dozenos.utils.file import makedir
 from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
 from dozenos.utils.kernel import check_kmod
+from dozenos.utils.kernel import verify_kmod
 from dozenos.utils.process import call
 from dozenos.utils.permission import chown
 from dozenos.utils.process import cmdl
@@ -78,6 +79,7 @@ group = 'openvpn'
 
 cfg_dir = '/run/openvpn'
 cfg_file = '/run/openvpn/{ifname}.conf'
+dco_module = 'ovpn'
 # Ciphers implemented by the in-tree "ovpn" Kernel module. Any other cipher
 # must be handled in userspace and thus rules out DCO.
 dco_ciphers = ['aes128gcm', 'aes192gcm', 'aes256gcm', 'chacha20poly1305']
@@ -312,6 +314,8 @@ def unoffloadable_cipher(value):
 def verify_dco(openvpn):
     if dict_search('offload.dco', openvpn) is None:
         return
+
+    verify_kmod(dco_module)
 
     if openvpn['device_type'] != 'tun':
         raise ConfigError('DCO requires "device-type tun"')
@@ -1072,9 +1076,9 @@ def apply(openvpn):
 
     # dynamically load the DCO Kernel extension if requested. It is never
     # unloaded: like vxlan, geneve or l2tpv3 we leave the module in place
-    dco_module = 'ovpn'
     if 'module_load_dco' in openvpn:
-        check_kmod(dco_module)
+        # verify_kmod() is called in verify(), so verify=False
+        check_kmod(dco_module, verify=False)
 
     # Now bail out early if interface is disabled or got deleted
     if 'deleted' in openvpn or 'disable' in openvpn:

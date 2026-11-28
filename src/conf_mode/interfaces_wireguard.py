@@ -35,6 +35,7 @@ from dozenos.configverify import verify_bond_bridge_member
 from dozenos.defaults import wireguard_fwmark_pref
 from dozenos.ifconfig import WireGuardIf
 from dozenos.utils.kernel import check_kmod
+from dozenos.utils.kernel import verify_kmod
 from dozenos.utils.network import check_port_availability
 from dozenos.utils.network import get_vrf_tableid
 from dozenos.utils.network import is_wireguard_key_pair
@@ -105,6 +106,7 @@ def verify(wireguard):
             )
         return None
 
+    verify_kmod('wireguard')
     verify_mtu_ipv6(wireguard)
     verify_address(wireguard)
     verify_vrf(wireguard)
@@ -169,7 +171,8 @@ def generate(wireguard):
 
 
 def apply(wireguard):
-    check_kmod('wireguard')
+    # verify_kmod() is called in verify(), so verify=False
+    check_kmod('wireguard', verify=False)
 
     wg = WireGuardIf(**wireguard)
 

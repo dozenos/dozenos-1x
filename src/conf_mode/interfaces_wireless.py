@@ -36,6 +36,7 @@ from dozenos.ifconfig import WiFiIf
 from dozenos.template import render
 from dozenos.utils.dict import dict_search
 from dozenos.utils.kernel import check_kmod
+from dozenos.utils.kernel import verify_kmod
 from dozenos.utils.kernel import is_module_loaded
 from dozenos.utils.file import read_file
 from dozenos.utils.file import write_file
@@ -156,6 +157,8 @@ def verify(wifi):
         verify_bridge_delete(wifi)
         return None
 
+    verify_kmod('mac80211')
+
     if 'physical_device' not in wifi:
         raise ConfigError('You must specify a physical-device "phy"')
 
@@ -258,7 +261,8 @@ def verify(wifi):
     return None
 
 def generate(wifi):
-    check_kmod('mac80211')
+    # verify_kmod() is called in verify(), so verify=False
+    check_kmod('mac80211', verify=False)
 
     interface = wifi['ifname']
 

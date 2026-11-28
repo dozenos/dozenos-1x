@@ -38,6 +38,7 @@ from dozenos.utils.cpu import get_available_cpus
 from dozenos.utils.dict import dict_search
 from dozenos.utils.file import write_file
 from dozenos.utils.kernel import check_kmod
+from dozenos.utils.kernel import verify_kmod
 from dozenos.utils.kernel import get_kernel_boot_arg
 from dozenos.utils.kernel import get_kernel_cmdline_options
 from dozenos.utils.kernel import get_crash_kernel_size
@@ -71,6 +72,8 @@ usb_autosuspend = r'/etc/udev/rules.d/40-usb-autosuspend.rules'
 # procfs twin of the debugfs control file: always present, works without debugfs
 # mounted and under kernel lockdown, which denies opening the debugfs one
 kernel_dynamic_debug = r'/proc/dynamic_debug/control'
+# Kernel modules supporting dynamic debugging from the CLI
+kernel_debug_modules = ['wireguard']
 time_format_to_locale = {'12-hour': 'en_US.UTF-8', '24-hour': 'en_GB.UTF-8'}
 tuned_profiles = {
     'power-save': 'powersave',
@@ -284,6 +287,9 @@ def verify(options):
                     )
 
     if 'kernel' in options:
+        debug_enabled = dict_search('kernel.debug', options) or {}
+        verify_kmod([module for module in kernel_debug_modules if module in debug_enabled])
+
         _cpu_info = get_cpus()[0]
         cpu_vendor = _cpu_info.get('vendor_id', 'unknown')
         if 'amd_pstate_driver' in options['kernel'] and cpu_vendor != 'AuthenticAMD':
@@ -654,13 +660,13 @@ def apply(options):
     # above is already applied and cannot be rolled back, so a failing write here
     # must not fail the commit.
     if options['kernel_debug_changed']:
-        modules = ['wireguard']
         modules_enabled = dict_search('kernel.debug', options) or []
-        for module in modules:
+        for module in kernel_debug_modules:
             flag = '+p' if module in modules_enabled else '-p'
             try:
                 if flag == '+p':
-                    check_kmod(module)
+                    # verify_kmod() is called in verify(), so verify=False
+                    check_kmod(module, verify=False)
                 write_file(kernel_dynamic_debug, f'module {module} {flag}')
             except (ConfigError, OSError) as e:
                 Warning(f'Unable to set dynamic debug for "{module}": {e}')

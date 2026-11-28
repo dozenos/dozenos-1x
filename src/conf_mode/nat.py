@@ -23,6 +23,7 @@ from dozenos.config import Config
 from dozenos.configdep import set_dependents, call_dependents
 from dozenos.template import render
 from dozenos.utils.kernel import check_kmod
+from dozenos.utils.kernel import verify_kmod
 from dozenos.utils.dict import dict_search
 from dozenos.utils.dict import dict_search_args
 from dozenos.utils.file import write_file
@@ -139,6 +140,8 @@ def verify(nat):
         # no need to verify the CLI as NAT is going to be deactivated
         return None
 
+    verify_kmod(k_mod)
+
     if dict_search('source.rule', nat):
         for rule, config in dict_search('source.rule', nat).items():
             err_msg = f'Source NAT configuration error in rule {rule}:'
@@ -229,7 +232,8 @@ def generate(nat):
     return None
 
 def apply(nat):
-    check_kmod(k_mod)
+    # verify_kmod() is called in verify(), so verify=False
+    check_kmod(k_mod, verify=False)
 
     cmdl(['nft', '--file', nftables_nat_config])
     cmdl(['nft', '--file', nftables_static_nat_conf])

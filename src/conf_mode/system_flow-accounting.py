@@ -25,6 +25,7 @@ from dozenos.configverify import verify_vrf
 from dozenos.configverify import verify_interface_exists
 from dozenos.template import render
 from dozenos.utils.file import read_file
+from dozenos.utils.kernel import verify_kmod
 from dozenos.utils.network import get_interface_vrf
 from dozenos.utils.network import interface_exists
 from dozenos.utils.network import is_addr_assigned
@@ -72,6 +73,8 @@ def get_config(config=None):
 def verify(flow_config):
     if not flow_config:
         return None
+
+    verify_kmod(ipt_netflow.module_name)
 
     # Check if at least one interface is configured
     if 'netflow' not in flow_config or 'interface' not in flow_config['netflow']:
